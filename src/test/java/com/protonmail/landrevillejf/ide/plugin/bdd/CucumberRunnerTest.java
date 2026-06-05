@@ -16,7 +16,7 @@ import static io.cucumber.junit.platform.engine.Constants.*;
 @IncludeEngines("cucumber")
 @SelectClasspathResource("features")
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME,
-        value = "com.protonmail.landrevillejf.swingide.plugin.bdd.steps")
+        value = "com.protonmail.landrevillejf.ide.plugin.bdd.steps")
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME,
         value = "pretty, html:build/reports/cucumber/cucumber-report.html, json:build/reports/cucumber/cucumber-report.json")
 @ConfigurationParameter(key = FILTER_TAGS_PROPERTY_NAME,

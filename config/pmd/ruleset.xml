@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="My Custom Ruleset"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 http://pmd.sourceforge.net/ruleset_2_0_0.xsd
+http://pmd.sourceforge.net/ruleset/2.0.0 ">
+
+    <description>
+        A custom PMD ruleset for my project.
+    </description>
+
+    <!-- Include built-in rulesets -->
+    <rule ref="category/java/bestpractices.xml"/>
+    <rule ref="category/java/design.xml"/>
+    <rule ref="category/java/codesize.xml"/>
+    <rule ref="category/java/unusedcode.xml"/>
+
+    <!-- Custom rules -->
+    <rule ref="rulesets/java/braces.xml/UnnecessaryBraces">
+        <properties>
+            <property name="minimumLineCount" value="1"/>
+        </properties>
+    </rule>
+    <rule ref="rulesets/java/controversial.xml/AvoidThrowingNullPointerException"/>
+    <rule ref="rulesets/java/performance.xml/UseStringBufferForStringAppends"/>
+
+    <!-- Exclude specific rules if needed -->
+
+
+</ruleset>
