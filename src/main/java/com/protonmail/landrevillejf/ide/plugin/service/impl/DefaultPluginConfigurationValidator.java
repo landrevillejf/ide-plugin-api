@@ -384,13 +384,14 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
     }
 
     private boolean isValidEmail(String email) {
-        String emailRegex = "^[A-Za-z0-9+_.-]+@(.+)$";
-        return Pattern.matches(emailRegex, email);
+        if (email == null || email.isEmpty()) return false;
+        return email.contains("@") && email.indexOf("@") > 0 &&
+                email.lastIndexOf(".") > email.indexOf("@") + 1;
     }
 
     private boolean isValidUrl(String url) {
-        String urlRegex = "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)*/?$";
-        return Pattern.matches(urlRegex, url);
+        if (url == null || url.isEmpty()) return false;
+        return url.startsWith("http://") || url.startsWith("https://");
     }
 
     @SuppressWarnings("unchecked")

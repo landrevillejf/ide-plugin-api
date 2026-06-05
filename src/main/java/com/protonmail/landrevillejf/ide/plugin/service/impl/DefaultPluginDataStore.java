@@ -40,6 +40,28 @@ public class DefaultPluginDataStore implements PluginDataStore {
         }
     }
 
+    /**
+     * Validates that a ZIP entry is safe to extract.
+     * Prevents Zip Slip vulnerability.
+     */
+    private Path getSafeExtractionPath(Path targetDir, String entryName) throws IOException {
+        // Normalize the entry name to remove any '..' or '.' segments
+        Path targetPath = targetDir.resolve(entryName).normalize();
+
+        // Get the absolute paths to compare
+        Path normalizedTargetDir = targetDir.toAbsolutePath().normalize();
+        Path normalizedTargetPath = targetPath.toAbsolutePath().normalize();
+
+        // Verify that the target path is within the target directory
+        if (!normalizedTargetPath.startsWith(normalizedTargetDir)) {
+            throw new SecurityException(
+                    "Zip entry is trying to escape the target directory: " + entryName
+            );
+        }
+
+        return targetPath;
+    }
+
     public DefaultPluginDataStore(Path dataRoot) {
         this.dataRoot = dataRoot;
 
@@ -454,13 +476,20 @@ public class DefaultPluginDataStore implements PluginDataStore {
                         byte[] metadataBytes = zis.readAllBytes();
                         @SuppressWarnings("unchecked")
                         Map<String, StoredData> restored = jsonMapper.readValue(metadataBytes, Map.class);
-                        // Restore metadata
                         dataMap.clear();
                         for (Map.Entry<String, StoredData> e : restored.entrySet()) {
                             dataMap.put(e.getKey(), e.getValue());
                         }
                     } else if (entry.getName().startsWith("data/")) {
                         String key = entry.getName().substring(5);
+
+                        // ⭐ CORRECTION ZIP SLIP - Valider que key ne contient pas ".."
+                        if (key.contains("..") || key.contains("/") || key.contains("\\")) {
+                            log.warn("Skipping malicious ZIP entry with path traversal: {}", entry.getName());
+                            zis.closeEntry();
+                            continue;
+                        }
+
                         Path dataFile = getDataFile(key);
                         Files.copy(zis, dataFile, StandardCopyOption.REPLACE_EXISTING);
                     }
