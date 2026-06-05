@@ -1,1 +1,0 @@
-package com.protonmail.landrevillejf.swingide.plugin.example;

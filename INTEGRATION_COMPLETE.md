@@ -29,8 +29,9 @@
   - Added: Logging of available services
 
 #### New Imports Added
+
 ```java
-import com.protonmail.landrevillejf.swingide.plugin.service.*;
+
 ```
 
 ### Available Services Through ExtendedPluginContext

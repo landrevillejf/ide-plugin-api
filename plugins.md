@@ -258,7 +258,7 @@ public enum IdePanelRegion {
 ```java
 import com.protonmail.landrevillejf.swingide.core.bus.EventBus;
 import com.protonmail.landrevillejf.swingide.core.layout.IdePanelRegion;
-import com.protonmail.landrevillejf.swingide.plugin.utils.PanelUtil;
+import utils.com.protonmail.landrevillejf.ide.plugin.PanelUtil;
 
 import javax.swing.*;
 import java.awt.*;
