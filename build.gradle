@@ -7,14 +7,6 @@ version = '3.0.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
-    maven {
-        url "http://localhost:8081/repository/maven-releases/"
-        allowInsecureProtocol = true
-        credentials {
-            username = findProperty('nexusUsername') ?: System.getenv('NEXUS_USERNAME')
-            password = findProperty('nexusPassword') ?: System.getenv('NEXUS_PASSWORD')
-        }
-    }
     flatDir {
         dirs "${rootDir}/libs"
     }
