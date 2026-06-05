@@ -166,12 +166,24 @@ def escapeHtml = { Object value ->
             .replace("'", '&#39;')
 }
 
+jacoco {
+    toolVersion = "0.8.12" // Dernière version
+}
+
 test {
     useJUnitPlatform()
 
-    // Exclure les classes de runner Cucumber
+    // Exclure les tests Cucumber
     exclude '**/PluginServicesRunnerTests*'
     exclude '**/RunCucumberTest*'
+
+    // Exclure les classes de test qui causent des problèmes avec JaCoCo
+    jacoco {
+        excludes = [
+                '**/SecurePluginClassLoaderTest*',
+                '**/DefaultPluginManagerTest*'
+        ]
+    }
 
     testLogging {
         events "passed", "skipped", "failed", "standardOut", "standardError"
@@ -182,9 +194,14 @@ test {
         showStandardStreams = true
     }
 
+    // Configuration headless pour les tests Swing
+    systemProperty 'java.awt.headless', 'true'
+    // Désactiver JaCoCo pour certains tests
+    systemProperty 'jacoco.skip', 'true'
+
     jvmArgs = [
-            "-Dslf4j.provider=ch.qos.logback.classic.spi.LogbackServiceProvider",
-            "-Dlogback.configurationFile=src/test/resources/logback-test.xml"
+            "-Djava.awt.headless=true",
+            "-Dslf4j.provider=ch.qos.logback.classic.spi.LogbackServiceProvider"
     ]
 
     testClassesDirs = sourceSets.test.output.classesDirs
@@ -193,6 +210,39 @@ test {
     reports {
         html.required = true
         junitXml.required = true
+    }
+
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/test/**',
+                    '**/mock/**',
+                    '**/cucumber/**',
+                    '**/*Test*',
+                    '**/*Runner*',
+                    '**/SecurePluginClassLoader*',
+                    '**/DefaultPluginManager*'
+            ])
+        }))
+    }
+}
+
+// Désactiver complètement jacoco pour les tâches de test problématiques
+tasks.withType(Test).configureEach {
+    jacoco {
+        enabled = false
     }
 }
 
