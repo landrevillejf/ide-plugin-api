@@ -1,7 +1,7 @@
 # IDE Plugin API
 
 [![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/yourusername/swing-ide)
-[![Java](https://img.shields.io/badge/Java-17+-orange.svg)](https://www.oracle.com/java/)
+[![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 A comprehensive, modular plugin system for the IDE that allows developers to extend the IDE with custom functionality, UI components, and services.
@@ -64,7 +64,7 @@ The IDE Plugin API provides a robust framework for extending the IDE with custom
 
 ### Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - IDE 3.0.0 or higher
 - Gradle 8.0+ (for building)
 
