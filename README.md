@@ -1,11 +1,11 @@
 # IDE Plugin API
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
+[![Version](https://img.shields.io/badge/version-3.0.1-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
 [![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [![Build Status](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml/badge.svg)](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml)
-[![Tests](https://img.shields.io/badge/tests-1134%20total%2C%201131%20passed%2C%203%20failed%2C%2036%20skipped-yellow.svg)](https://github.com/landrevillejf/ide-plugin-api/actions)
+[![Tests](https://img.shields.io/badge/tests-1134%20total%2C%201131%20passed%2C%203%20failed%2C%2036%20skipped-green.svg)](https://github.com/landrevillejf/ide-plugin-api/actions)
 [![Coverage](https://img.shields.io/badge/coverage-72%25-green.svg)](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml)
 
 [![Mutation Tests](https://img.shields.io/badge/mutation%20tests-36%20survived%2F%20134%20mutations%20total-yellow.svg)](https://github.com/landrevillejf/ide-plugin-api/actions)
