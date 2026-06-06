@@ -1,8 +1,25 @@
 # IDE Plugin API
 
-[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/yourusername/swing-ide)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
 [![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+[![Build Status](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml/badge.svg)](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml)
+[![Tests](https://img.shields.io/badge/tests-1134%20total%2C%201131%20passed%2C%203%20failed%2C%2036%20skipped-yellow.svg)](https://github.com/landrevillejf/ide-plugin-api/actions)
+[![Coverage](https://img.shields.io/badge/coverage-72%25-green.svg)](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml)
+
+[![Mutation Tests](https://img.shields.io/badge/mutation%20tests-36%20survived%2F%20134%20mutations%20total-yellow.svg)](https://github.com/landrevillejf/ide-plugin-api/actions)
+[![Cucumber Tests](https://img.shields.io/badge/cucumber-36%2F36%20passed-green.svg)](https://github.com/landrevillejf/ide-plugin-api/actions)
+[![JaCoCo](https://img.shields.io/badge/JaCoCo-0.8.12-blue.svg)](https://www.eclemma.org/jacoco/)
+
+[![PITest](https://img.shields.io/badge/PITest-1.19.0--rc.3-blue.svg)](https://pitest.org/)
+[![CodeQL](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/codeql.yml/badge.svg)](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/codeql.yml)
+[![OWASP Dependency Check](https://img.shields.io/badge/OWASP%20DC-12.1.1-blue.svg)](https://jeremylong.github.io/DependencyCheck/)
+
+[![SonarQube](https://img.shields.io/badge/SonarQube-5.0.0-blue.svg)](https://www.sonarqube.org/)
+[![Gradle](https://img.shields.io/badge/Gradle-9.3-blue.svg)](https://gradle.org/)
+[![GitHub release](https://img.shields.io/github/v/release/landrevillejf/ide-plugin-api)](https://github.com/landrevillejf/ide-plugin-api/releases)
+[![GitHub commits](https://img.shields.io/github/commit-activity/m/landrevillejf/ide-plugin-api)](https://github.com/landrevillejf/ide-plugin-api/commits/main)
 
 A comprehensive, modular plugin system for the IDE that allows developers to extend the IDE with custom functionality, UI components, and services.
 
