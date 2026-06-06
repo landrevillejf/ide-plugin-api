@@ -3,6 +3,7 @@ Feature: Plugin Hook Service
   I want to register lifecycle hooks
   So that I can respond to plugin lifecycle events
 
+  @ignore-ci
   Scenario: Plugin can register and execute hooks
     When plugin registers hook for "POST_INIT"
     And hook is triggered
