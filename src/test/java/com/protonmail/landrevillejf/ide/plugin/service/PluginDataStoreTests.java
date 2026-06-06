@@ -2,8 +2,11 @@ package com.protonmail.landrevillejf.ide.plugin.service;
 
 import org.junit.jupiter.api.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -99,14 +102,16 @@ public class PluginDataStoreTests {
         assertThat(dataStore.retrieve(PLUGIN_ID, "key")).isEqualTo("value");
     }
 
-    // Mock implementation
+    // Dans PluginDataStoreTests.MockPluginDataStore, ajoutez ou modifiez :
+
     public static class MockPluginDataStore implements PluginDataStore {
-        private final Map<String, Map<String, Object>> storage = new java.util.HashMap<>();
-        private final Map<String, Map<String, Object>> backups = new java.util.HashMap<>();
+        private final Map<String, Map<String, Object>> store = new HashMap<>();
+        private final Map<String, Map<String, Map<String, Object>>> backups = new HashMap<>();
+        private int backupCounter = 0;
 
         @Override
         public void store(String pluginId, String key, Object data) {
-            storage.computeIfAbsent(pluginId, k -> new java.util.HashMap<>()).put(key, data);
+            store.computeIfAbsent(pluginId, k -> new HashMap<>()).put(key, data);
         }
 
         @Override
@@ -116,76 +121,118 @@ public class PluginDataStoreTests {
 
         @Override
         public Object retrieve(String pluginId, String key) {
-            return storage.getOrDefault(pluginId, new java.util.HashMap<>()).get(key);
+            Map<String, Object> pluginStore = store.get(pluginId);
+            return pluginStore != null ? pluginStore.get(key) : null;
         }
 
         @Override
         public <T> T retrieve(String pluginId, String key, Class<T> dataClass) {
-            Object value = retrieve(pluginId, key);
-            return dataClass.isInstance(value) ? (T) value : null;
+            Object data = retrieve(pluginId, key);
+            return dataClass.isInstance(data) ? (T) data : null;
         }
 
         @Override
         public boolean exists(String pluginId, String key) {
-            return storage.getOrDefault(pluginId, new java.util.HashMap<>()).containsKey(key);
+            Map<String, Object> pluginStore = store.get(pluginId);
+            return pluginStore != null && pluginStore.containsKey(key);
         }
 
         @Override
         public boolean delete(String pluginId, String key) {
-            Map<String, Object> data = storage.get(pluginId);
-            return data != null && data.remove(key) != null;
+            Map<String, Object> pluginStore = store.get(pluginId);
+            if (pluginStore != null) {
+                return pluginStore.remove(key) != null;
+            }
+            return false;
         }
 
         @Override
         public void clear(String pluginId) {
-            storage.remove(pluginId);
+            Map<String, Object> pluginStore = store.get(pluginId);
+            if (pluginStore != null) {
+                pluginStore.clear();
+            }
         }
 
         @Override
         public List<String> getKeys(String pluginId) {
-            return new java.util.ArrayList<>(storage.getOrDefault(pluginId, new java.util.HashMap<>()).keySet());
+            Map<String, Object> pluginStore = store.get(pluginId);
+            return pluginStore != null ? new ArrayList<>(pluginStore.keySet()) : new ArrayList<>();
         }
 
         @Override
-        public long getSize(String pluginId, String key) { return 0; }
+        public long getSize(String pluginId, String key) {
+            return 0;
+        }
 
         @Override
-        public long getTotalSize(String pluginId) { return 0; }
+        public long getTotalSize(String pluginId) {
+            return 0;
+        }
 
         @Override
         public Map<String, Object> exportAllData(String pluginId) {
-            return new java.util.HashMap<>(storage.getOrDefault(pluginId, new java.util.HashMap<>()));
+            Map<String, Object> pluginStore = store.get(pluginId);
+            return pluginStore != null ? new HashMap<>(pluginStore) : new HashMap<>();
         }
 
         @Override
         public void importAllData(String pluginId, Map<String, Object> data) {
-            storage.put(pluginId, new java.util.HashMap<>(data));
+            store.put(pluginId, new HashMap<>(data));
         }
 
         @Override
         public String backup(String pluginId) {
-            String backupId = "backup-" + System.currentTimeMillis();
-            backups.put(backupId, new java.util.HashMap<>(storage.getOrDefault(pluginId, new java.util.HashMap<>())));
+            String backupId = pluginId + "_backup_" + System.currentTimeMillis() + "_" + (++backupCounter);
+            Map<String, Object> backupData = exportAllData(pluginId);
+            backups.computeIfAbsent(pluginId, k -> new HashMap<>()).put(backupId, backupData);
             return backupId;
         }
 
         @Override
         public boolean restore(String pluginId, String backupId) {
-            if (backups.containsKey(backupId)) {
-                storage.put(pluginId, new java.util.HashMap<>(backups.get(backupId)));
+            Map<String, Map<String, Object>> pluginBackups = backups.get(pluginId);
+            if (pluginBackups != null && pluginBackups.containsKey(backupId)) {
+                Map<String, Object> backupData = pluginBackups.get(backupId);
+                importAllData(pluginId, backupData);
                 return true;
             }
             return false;
         }
 
         @Override
-        public List<Map<String, Object>> getBackups(String pluginId) { return java.util.Collections.emptyList(); }
+        public List<Map<String, Object>> getBackups(String pluginId) {
+            Map<String, Map<String, Object>> pluginBackups = backups.get(pluginId);
+            if (pluginBackups != null) {
+                return pluginBackups.entrySet().stream()
+                        .map(entry -> {
+                            Map<String, Object> backupInfo = new HashMap<>();
+                            backupInfo.put("id", entry.getKey());
+                            backupInfo.put("size", entry.getValue().size());
+                            return backupInfo;
+                        })
+                        .collect(Collectors.toList());
+            }
+            return new ArrayList<>();
+        }
 
         @Override
-        public boolean deleteBackup(String pluginId, String backupId) { return true; }
+        public boolean deleteBackup(String pluginId, String backupId) {
+            Map<String, Map<String, Object>> pluginBackups = backups.get(pluginId);
+            if (pluginBackups != null) {
+                return pluginBackups.remove(backupId) != null;
+            }
+            return false;
+        }
 
         @Override
-        public Map<String, Object> getStatistics(String pluginId) { return new java.util.HashMap<>(); }
+        public Map<String, Object> getStatistics(String pluginId) {
+            Map<String, Object> stats = new HashMap<>();
+            Map<String, Object> pluginStore = store.get(pluginId);
+            stats.put("storeSize", pluginStore != null ? pluginStore.size() : 0);
+            stats.put("backupCount", backups.getOrDefault(pluginId, new HashMap<>()).size());
+            return stats;
+        }
     }
 }
 

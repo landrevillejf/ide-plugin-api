@@ -2,8 +2,7 @@ package com.protonmail.landrevillejf.ide.plugin.service;
 
 import org.junit.jupiter.api.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -64,44 +63,108 @@ public class PluginHookServiceTests {
     }
 
     // Mock implementation
+    // Dans PluginHookServiceTests.java
     public static class MockPluginHookService implements PluginHookService {
-        private int hookCounter = 0;
+        private final Map<String, HookCallback> hooks = new HashMap<>();
+        private int counter = 0;
 
         @Override
         public String registerHook(String pluginId, HookType hookType, HookCallback callback) {
-            return "hook-" + (++hookCounter);
+            String hookId = "hook-" + (++counter);
+            hooks.put(hookId, callback);
+            return hookId;
         }
 
         @Override
         public String registerHookWithPriority(String pluginId, HookType hookType, int priority, HookCallback callback) {
-            return "hook-" + (++hookCounter);
+            return registerHook(pluginId, hookType, callback);
         }
 
         @Override
-        public boolean unregisterHook(String hookId) { return true; }
+        public boolean unregisterHook(String hookId) {
+            return hooks.remove(hookId) != null;
+        }
 
         @Override
-        public int unregisterHooksByType(String pluginId, HookType hookType) { return 0; }
+        public int unregisterHooksByType(String pluginId, HookType hookType) {
+            int count = 0;
+            Iterator<Map.Entry<String, HookCallback>> iterator = hooks.entrySet().iterator();
+            while (iterator.hasNext()) {
+                iterator.next();
+                count++;
+                iterator.remove();
+            }
+            return count;
+        }
 
         @Override
         public HookContext executeHooks(String pluginId, HookType hookType, Map<String, Object> hookData) {
-            return new MockHookContext();
+            // ⭐ CRITIQUE : Exécuter tous les callbacks
+            for (HookCallback callback : hooks.values()) {
+                try {
+                    callback.execute(new SimpleHookContext(pluginId, hookType, hookData));
+                } catch (Exception e) {
+                    // Ignorer les erreurs pour le test
+                }
+            }
+
+            return new SimpleHookContext(pluginId, hookType, hookData);
         }
 
         @Override
-        public Object executeHook(String hookId, Map<String, Object> hookData) { return null; }
+        public Object executeHook(String hookId, Map<String, Object> hookData) {
+            HookCallback callback = hooks.get(hookId);
+            if (callback != null) {
+                try {
+                    callback.execute(new SimpleHookContext("test-plugin", HookType.POST_INIT, hookData));
+                } catch (Exception e) {
+                    // Ignorer
+                }
+            }
+            return null;
+        }
 
         @Override
-        public List<String> getPluginHooks(String pluginId) { return java.util.Collections.emptyList(); }
+        public List<String> getPluginHooks(String pluginId) {
+            return new ArrayList<>(hooks.keySet());
+        }
 
         @Override
-        public List<String> getHooksByType(String pluginId, HookType hookType) { return java.util.Collections.emptyList(); }
+        public List<String> getHooksByType(String pluginId, HookType hookType) {
+            return new ArrayList<>(hooks.keySet());
+        }
 
         @Override
-        public List<Map<String, Object>> getHookExecutionHistory(String pluginId, int maxEntries) { return java.util.Collections.emptyList(); }
+        public List<Map<String, Object>> getHookExecutionHistory(String pluginId, int maxEntries) {
+            return new ArrayList<>();
+        }
 
         @Override
-        public void clearHookExecutionHistory(String pluginId) {}
+        public void clearHookExecutionHistory(String pluginId) {
+        }
+
+        // Implémentation simple de HookContext
+        private static class SimpleHookContext implements HookContext {
+            private final String pluginId;
+            private final HookType hookType;
+            private final Map<String, Object> hookData;
+            private Object result;
+            private boolean cancelled;
+
+            SimpleHookContext(String pluginId, HookType hookType, Map<String, Object> hookData) {
+                this.pluginId = pluginId;
+                this.hookType = hookType;
+                this.hookData = hookData != null ? new HashMap<>(hookData) : new HashMap<>();
+            }
+
+            @Override public String getPluginId() { return pluginId; }
+            @Override public HookType getHookType() { return hookType; }
+            @Override public Map<String, Object> getHookData() { return hookData; }
+            @Override public void setResult(Object result) { this.result = result; }
+            @Override public Object getResult() { return result; }
+            @Override public void cancel() { this.cancelled = true; }
+            @Override public boolean isCancelled() { return cancelled; }
+        }
     }
 
     static class MockHookContext implements PluginHookService.HookContext {

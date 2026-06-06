@@ -32,6 +32,7 @@ public class PluginServicesStepDefinitions {
     private long counterValue = 0;
     private boolean hookExecuted = false;
     private PluginMonitoringService.HealthReport healthReport;
+    private String registeredHookId;
 
     public PluginServicesStepDefinitions() {
         initializeServices();
@@ -246,32 +247,6 @@ public class PluginServicesStepDefinitions {
         assertThat(data).isEqualTo("config");
     }
 
-    @When("plugin stores some data")
-    public void plugin_stores_some_data() {
-        dataStore.store(PLUGIN_ID, "key1", "value1");
-        dataStore.store(PLUGIN_ID, "key2", "value2");
-    }
-
-    @And("plugin creates a backup")
-    public void plugin_creates_backup() {
-        // Backup created
-    }
-
-    @And("plugin clears all data")
-    public void plugin_clears_all_data() {
-        dataStore.clear(PLUGIN_ID);
-    }
-
-    @And("plugin restores from backup")
-    public void plugin_restores_from_backup() {
-        // Data restored
-    }
-
-    @Then("data should be restored")
-    public void data_should_be_restored() {
-        assertThat(dataStore.getKeys(PLUGIN_ID)).isNotEmpty();
-    }
-
     // Async Task Executor Steps
     @When("plugin executes async named task {string}")
     public void plugin_executes_async_task(String taskName) {
@@ -294,21 +269,37 @@ public class PluginServicesStepDefinitions {
         // Task would execute after delay
     }
 
-    // Hook Service Steps
     @When("plugin registers hook for {string}")
     public void plugin_registers_hook(String hookType) {
-        hookService.registerHook(PLUGIN_ID, PluginHookService.HookType.POST_INIT, (ctx) -> {
+        // Réinitialiser le flag
+        hookExecuted = false;
+
+        // Convertir le string en HookType
+        PluginHookService.HookType type = PluginHookService.HookType.valueOf(hookType);
+
+        // Créer un callback - méthode void, pas de return
+        PluginHookService.HookCallback callback = context -> {
             hookExecuted = true;
-        });
+        };
+
+        // Enregistrer le hook et stocker l'ID (optionnel)
+        registeredHookId = hookService.registerHook(PLUGIN_ID, type, callback);
     }
 
     @And("hook is triggered")
     public void hook_is_triggered() {
+        // Exécuter le hook en utilisant executeHooks
         hookService.executeHooks(PLUGIN_ID, PluginHookService.HookType.POST_INIT, new HashMap<>());
     }
 
     @Then("hook callback should be executed")
     public void hook_callback_should_be_executed() {
+        // Petit délai pour permettre l'exécution asynchrone si nécessaire
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
         assertThat(hookExecuted).isTrue();
     }
 
@@ -342,6 +333,49 @@ public class PluginServicesStepDefinitions {
     @And("plugin can resolve the alert")
     public void plugin_can_resolve_alert() {
         // Alert resolution would be tested
+    }
+
+    //
+
+    // Data Store Steps
+    private String lastBackupId;
+
+    @When("plugin stores some data")
+    public void plugin_stores_some_data() {
+        dataStore.store(PLUGIN_ID, "key1", "value1");
+        dataStore.store(PLUGIN_ID, "key2", "value2");
+    }
+
+    @And("plugin creates a backup")
+    public void plugin_creates_backup() {
+        lastBackupId = dataStore.backup(PLUGIN_ID);
+        assertThat(lastBackupId).isNotNull();
+    }
+
+    @And("plugin clears all data")
+    public void plugin_clears_all_data() {
+        dataStore.clear(PLUGIN_ID);
+        // Verify data is cleared
+        assertThat(dataStore.getKeys(PLUGIN_ID)).isEmpty();
+    }
+
+    @And("plugin restores from backup")
+    public void plugin_restores_from_backup() {
+        boolean restored = dataStore.restore(PLUGIN_ID, lastBackupId);
+        assertThat(restored).isTrue();
+    }
+
+    @Then("data should be restored")
+    public void data_should_be_restored() {
+        List<String> keys = dataStore.getKeys(PLUGIN_ID);
+        assertThat(keys).isNotEmpty();
+
+        // Verify specific data was restored
+        Object value1 = dataStore.retrieve(PLUGIN_ID, "key1");
+        Object value2 = dataStore.retrieve(PLUGIN_ID, "key2");
+
+        assertThat(value1).isEqualTo("value1");
+        assertThat(value2).isEqualTo("value2");
     }
 }
 
