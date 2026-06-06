@@ -11,13 +11,16 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.stubbing.Answer;
 
 import javax.swing.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class PanelUtilTest {
@@ -27,6 +30,7 @@ class PanelUtilTest {
     private String pluginId;
     private JPanel testPanel;
     private Icon testIcon;
+    private Consumer<PanelAddResponse> capturedSubscriber;
 
     @BeforeEach
     void setUp() {
@@ -35,6 +39,12 @@ class PanelUtilTest {
         panelUtil = new PanelUtil(eventBus, pluginId);
         testPanel = new JPanel();
         testIcon = mock(Icon.class);
+
+        // Capture the subscriber when subscribe is called
+        doAnswer((Answer<Void>) invocation -> {
+            capturedSubscriber = invocation.getArgument(1);
+            return null;
+        }).when(eventBus).subscribe(eq(PanelAddResponse.class), any());
     }
 
     @Test
@@ -73,9 +83,7 @@ class PanelUtilTest {
         verify(eventBus).publish(requestCaptor.capture());
         PanelAddRequest request = requestCaptor.getValue();
 
-        // Capture the response subscriber
-        ArgumentCaptor<Class<PanelAddResponse>> responseClassCaptor = ArgumentCaptor.forClass(Class.class);
-        verify(eventBus).subscribe(responseClassCaptor.capture(), any());
+        verify(eventBus).subscribe(eq(PanelAddResponse.class), any());
 
         // When - simulate successful response
         PanelAddResponse successResponse = new PanelAddResponse(
@@ -85,12 +93,115 @@ class PanelUtilTest {
                 "Panel added successfully"
         );
 
-        // Get the subscriber and invoke it
-        // Note: This requires capturing the consumer from subscribe
-        // Alternative approach below
+        capturedSubscriber.accept(successResponse);
 
-        // Then - future should complete with true
-        // This needs proper setup as shown in the next test
+        // Then
+        assertTrue(future.isDone());
+        assertTrue(future.join());
+    }
+
+    @Test
+    void addPanel_AsyncWithStringLocation_ShouldCompleteFutureWithFalseOnFailureResponse() {
+        // Given
+        ArgumentCaptor<PanelAddRequest> requestCaptor = ArgumentCaptor.forClass(PanelAddRequest.class);
+        CompletableFuture<Boolean> future = panelUtil.addPanel("Test", testIcon, testPanel, "center");
+
+        verify(eventBus).publish(requestCaptor.capture());
+        PanelAddRequest request = requestCaptor.getValue();
+
+        verify(eventBus).subscribe(eq(PanelAddResponse.class), any());
+
+        // When - simulate failed response
+        PanelAddResponse failureResponse = new PanelAddResponse(
+                pluginId,
+                request.getPanelId(),
+                false,
+                "Failed to add panel"
+        );
+
+        capturedSubscriber.accept(failureResponse);
+
+        // Then
+        assertTrue(future.isDone());
+        assertFalse(future.join());
+    }
+
+    @Test
+    void addPanel_AsyncWithStringLocation_ShouldIgnoreResponsesForOtherPlugins() {
+        // Given
+        ArgumentCaptor<PanelAddRequest> requestCaptor = ArgumentCaptor.forClass(PanelAddRequest.class);
+        CompletableFuture<Boolean> future = panelUtil.addPanel("Test", testIcon, testPanel, "center");
+
+        verify(eventBus).publish(requestCaptor.capture());
+        PanelAddRequest request = requestCaptor.getValue();
+
+        verify(eventBus).subscribe(eq(PanelAddResponse.class), any());
+
+        // When - simulate response for different plugin
+        PanelAddResponse wrongPluginResponse = new PanelAddResponse(
+                "other.plugin",
+                request.getPanelId(),
+                true,
+                "Success"
+        );
+
+        capturedSubscriber.accept(wrongPluginResponse);
+
+        // Then - future should not complete yet
+        assertFalse(future.isDone());
+
+        // When - simulate correct response
+        PanelAddResponse correctResponse = new PanelAddResponse(
+                pluginId,
+                request.getPanelId(),
+                true,
+                "Success"
+        );
+
+        capturedSubscriber.accept(correctResponse);
+
+        // Then
+        assertTrue(future.isDone());
+        assertTrue(future.join());
+    }
+
+    @Test
+    void addPanel_AsyncWithStringLocation_ShouldIgnoreResponsesForOtherPanelIds() {
+        // Given
+        ArgumentCaptor<PanelAddRequest> requestCaptor = ArgumentCaptor.forClass(PanelAddRequest.class);
+        CompletableFuture<Boolean> future = panelUtil.addPanel("Test", testIcon, testPanel, "center");
+
+        verify(eventBus).publish(requestCaptor.capture());
+        String expectedPanelId = requestCaptor.getValue().getPanelId();
+
+        verify(eventBus).subscribe(eq(PanelAddResponse.class), any());
+
+        // When - simulate response for different panel ID
+        PanelAddResponse wrongPanelResponse = new PanelAddResponse(
+                pluginId,
+                "wrong.panel.id",
+                true,
+                "Success"
+        );
+
+        capturedSubscriber.accept(wrongPanelResponse);
+
+        // Then - future should not complete yet
+        assertFalse(future.isDone());
+
+        // When - simulate correct response
+        PanelAddResponse correctResponse = new PanelAddResponse(
+                pluginId,
+                expectedPanelId,
+                true,
+                "Success"
+        );
+
+        capturedSubscriber.accept(correctResponse);
+
+        // Then
+        assertTrue(future.isDone());
+        assertTrue(future.join());
     }
 
     @Test
@@ -138,17 +249,76 @@ class PanelUtilTest {
     }
 
     @Test
-    void addPanelSync_WithStringLocation_ShouldReturnTrueOnSuccess() {
-        // This test requires mocking the async addPanel to return completed future
-        // Since addPanelSync calls addPanel and waits, we need to test the actual behavior
-        // with a properly set up event bus
+    void addPanelSync_ShouldReturnTrueOnSuccess() {
+        // Given
+        PanelUtil spyPanelUtil = spy(panelUtil);
+        CompletableFuture<Boolean> completedFuture = CompletableFuture.completedFuture(true);
+        doReturn(completedFuture).when(spyPanelUtil).addPanel(any(), any(), any(), any(String.class));
+
+        // When
+        boolean result = spyPanelUtil.addPanelSync("Test", testIcon, testPanel, "center");
+
+        // Then
+        assertTrue(result);
+    }
+
+    @Test
+    void addPanelSync_ShouldReturnFalseOnFalseFuture() {
+        // Given
+        PanelUtil spyPanelUtil = spy(panelUtil);
+        CompletableFuture<Boolean> completedFuture = CompletableFuture.completedFuture(false);
+        doReturn(completedFuture).when(spyPanelUtil).addPanel(any(), any(), any(), any(String.class));
+
+        // When
+        boolean result = spyPanelUtil.addPanelSync("Test", testIcon, testPanel, "center");
+
+        // Then
+        assertFalse(result);
     }
 
     @Test
     void addPanelSync_ShouldReturnFalseOnException() {
-        // Given - we need to make addPanel throw an exception
-        // This is tricky with the current implementation
-        // Consider using a spy or test double
+        // Given
+        PanelUtil spyPanelUtil = spy(panelUtil);
+        CompletableFuture<Boolean> failedFuture = new CompletableFuture<>();
+        failedFuture.completeExceptionally(new RuntimeException("Test exception"));
+        doReturn(failedFuture).when(spyPanelUtil).addPanel(any(), any(), any(), any(String.class));
+
+        // When
+        boolean result = spyPanelUtil.addPanelSync("Test", testIcon, testPanel, "center");
+
+        // Then
+        assertFalse(result);
+    }
+
+    @Test
+    void addPanelSync_WithRegion_ShouldCallStringLocationVersion() {
+        // Given
+        PanelUtil spyPanelUtil = spy(panelUtil);
+        doReturn(true).when(spyPanelUtil).addPanelSync(any(), any(), any(), any(String.class));
+
+        // When
+        spyPanelUtil.addPanelSync("Test", testIcon, testPanel, IdePanelRegion.LEFT);
+
+        // Then
+        verify(spyPanelUtil).addPanelSync(eq("Test"), eq(testIcon), eq(testPanel), eq("left"));
+    }
+
+    @Test
+    void addPanelSync_ShouldHandleTimeout() {
+        // Given
+        PanelUtil spyPanelUtil = spy(panelUtil);
+        CompletableFuture<Boolean> pendingFuture = new CompletableFuture<>();
+        doReturn(pendingFuture).when(spyPanelUtil).addPanel(any(), any(), any(), any(String.class));
+
+        // When
+        long startTime = System.currentTimeMillis();
+        boolean result = spyPanelUtil.addPanelSync("Test", testIcon, testPanel, "center");
+        long duration = System.currentTimeMillis() - startTime;
+
+        // Then
+        assertFalse(result);
+        assertTrue(duration >= 4900, "Should timeout around 5 seconds, took: " + duration + "ms");
     }
 
     @Test
@@ -196,8 +366,8 @@ class PanelUtilTest {
     @Test
     void addPanel_ShouldGenerateUniquePanelIds() {
         // When
-        CompletableFuture<Boolean> future1 = panelUtil.addPanel("Panel 1", testIcon, testPanel, "left");
-        CompletableFuture<Boolean> future2 = panelUtil.addPanel("Panel 2", testIcon, testPanel, "right");
+        panelUtil.addPanel("Panel 1", testIcon, testPanel, "left");
+        panelUtil.addPanel("Panel 2", testIcon, testPanel, "right");
 
         // Then
         ArgumentCaptor<PanelAddRequest> requestCaptor = ArgumentCaptor.forClass(PanelAddRequest.class);
@@ -209,12 +379,6 @@ class PanelUtilTest {
         assertNotEquals(panelId1, panelId2);
         assertTrue(panelId1.startsWith(pluginId + "-"));
         assertTrue(panelId2.startsWith(pluginId + "-"));
-    }
-
-    @Test
-    void addPanel_ShouldOnlyCompleteForMatchingResponse() {
-        // This test requires more sophisticated mocking of the event bus subscriber
-        // to verify that responses for other plugins are ignored
     }
 
     @Test
@@ -233,5 +397,79 @@ class PanelUtilTest {
         assertEquals("right", requests.get(1).getLocation());
         assertEquals("bottom", requests.get(2).getLocation());
         assertEquals("center", requests.get(3).getLocation());
+    }
+
+    @Test
+    void addPanel_ShouldLogErrorOnFailureResponse() {
+        // Given
+        ArgumentCaptor<PanelAddRequest> requestCaptor = ArgumentCaptor.forClass(PanelAddRequest.class);
+        CompletableFuture<Boolean> future = panelUtil.addPanel("Test", testIcon, testPanel, "center");
+
+        verify(eventBus).publish(requestCaptor.capture());
+        PanelAddRequest request = requestCaptor.getValue();
+
+        verify(eventBus).subscribe(eq(PanelAddResponse.class), any());
+
+        // When - simulate failed response
+        PanelAddResponse failureResponse = new PanelAddResponse(
+                pluginId,
+                request.getPanelId(),
+                false,
+                "Error message"
+        );
+
+        capturedSubscriber.accept(failureResponse);
+
+        // Then
+        assertTrue(future.isDone());
+        assertFalse(future.join());
+    }
+
+    @Test
+    void addPanel_ShouldNotCompleteForNonMatchingPluginId() {
+        // Given
+        ArgumentCaptor<PanelAddRequest> requestCaptor = ArgumentCaptor.forClass(PanelAddRequest.class);
+        CompletableFuture<Boolean> future = panelUtil.addPanel("Test", testIcon, testPanel, "center");
+
+        verify(eventBus).publish(requestCaptor.capture());
+
+        verify(eventBus).subscribe(eq(PanelAddResponse.class), any());
+
+        // When - simulate response for different plugin
+        PanelAddResponse wrongPluginResponse = new PanelAddResponse(
+                "different.plugin",
+                "any-id",
+                true,
+                "Success"
+        );
+
+        capturedSubscriber.accept(wrongPluginResponse);
+
+        // Then
+        assertFalse(future.isDone());
+    }
+
+    @Test
+    void addPanel_ShouldNotCompleteForNonMatchingPanelId() {
+        // Given
+        ArgumentCaptor<PanelAddRequest> requestCaptor = ArgumentCaptor.forClass(PanelAddRequest.class);
+        CompletableFuture<Boolean> future = panelUtil.addPanel("Test", testIcon, testPanel, "center");
+
+        verify(eventBus).publish(requestCaptor.capture());
+
+        verify(eventBus).subscribe(eq(PanelAddResponse.class), any());
+
+        // When - simulate response for different panel ID
+        PanelAddResponse wrongPanelResponse = new PanelAddResponse(
+                pluginId,
+                "wrong.panel.id",
+                true,
+                "Success"
+        );
+
+        capturedSubscriber.accept(wrongPanelResponse);
+
+        // Then
+        assertFalse(future.isDone());
     }
 }

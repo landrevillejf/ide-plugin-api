@@ -62,6 +62,7 @@ jacoco {
     toolVersion = "0.8.12"
 }
 
+// Configurer JaCoCo pour qu'il s'exécute AVANT PIT
 test {
     useJUnitPlatform()
 
@@ -76,7 +77,6 @@ test {
         showStandardStreams = true
     }
 
-    // Configuration headless pour les tests Swing
     systemProperty 'java.awt.headless', 'true'
 
     jvmArgs = [
@@ -92,13 +92,24 @@ test {
         junitXml.required = true
     }
 
-    // Activer JaCoCo pour ce task
-    finalizedBy jacocoTestReport
+    // ⭐ FORCER L'EXÉCUTION DE JACOCO
+    jacoco {
+        enabled = true
+        destinationFile = layout.buildDirectory.file("jacoco/test.exec").get().asFile
+    }
+}
+
+// ⭐ S'ASSURER QUE JACOCO EST EXÉCUTÉ
+tasks.withType(Test).configureEach {
+    jacoco {
+        enabled = true
+    }
 }
 
 jacocoTestReport {
     dependsOn test
     description = 'Generate JaCoCo coverage report'
+    executionData fileTree(project.rootDir.absolutePath).include("**/build/jacoco/*.exec")
 
     reports {
         xml.required = true
@@ -121,6 +132,70 @@ jacocoTestReport {
         }))
     }
 }
+
+// ⭐ TÂCHE POUR FORCER LA GÉNÉRATION DU RAPPORT
+tasks.register('jacocoGenerateReport') {
+    dependsOn jacocoTestReport
+    doLast {
+        println "JaCoCo report generated at: ${buildDir}/reports/jacoco/test/html/index.html"
+    }
+}
+
+// ==================== PIT MUTATION TESTING ====================
+pitest {
+    targetClasses = ['com.protonmail.landrevillejf.ide.plugin.*']
+    threads = 4
+    outputFormats = ['HTML', 'XML']
+    timestampedReports = false
+    mutators = ['DEFAULTS']
+    verbose = true
+    junit5PluginVersion = '1.2.1'
+    mutationThreshold = 0
+    coverageThreshold = 0
+    failWhenNoMutations = false
+    skipFailingTests = true
+
+    excludedTestClasses = [
+            '**.bdd.*',
+            '**.cucumber.*',
+            '**.*Cucumber*',
+            '**.*Runner*',
+            '**.SecurePluginClassLoaderTest',
+            '**.DefaultPluginManagerTest'
+    ]
+
+    excludedClasses = [
+            '**.test.*',
+            '**.mock.*',
+            '**.dto.*',
+            '**.config.*',
+            '**.Main*',
+            '**.Application*',
+            '**.bdd.*',
+            '**.cucumber.*',
+            '**.SecurePluginClassLoader',
+            '**.DefaultPluginManager'
+    ]
+
+    excludedMethods = ['main', 'toString', 'hashCode', 'equals', 'clone']
+    jvmArgs = ['-Djava.awt.headless=true']
+}
+
+// ⭐ FORCER L'EXÉCUTION DES TESTS AVEC JACOCO
+test {
+    jacoco {
+        enabled = true
+    }
+}
+
+// ⭐ NETTOYER LES CACHES JACOCO
+tasks.register('cleanJacoco') {
+    delete "${buildDir}/jacoco"
+    delete "${buildDir}/reports/jacoco"
+}
+
+jacocoTestReport.dependsOn cleanJacoco
+test.finalizedBy jacocoTestReport
 
 // ==================== JAVA CONFIGURATION ====================
 java {
@@ -193,49 +268,6 @@ tasks.register('cucumberTest', Test) {
     onlyIf {
         file("${project.projectDir}/src/test/resources/features").exists()
     }
-}
-
-// ==================== PIT MUTATION TESTING ====================
-pitest {
-    targetClasses = ['com.protonmail.landrevillejf.ide.plugin.*']
-    threads = 4  // Réduire le nombre de threads pour éviter les problèmes
-    outputFormats = ['HTML', 'XML']
-    timestampedReports = false
-    mutators = ['DEFAULTS']
-    verbose = true
-    junit5PluginVersion = '1.2.1'
-    mutationThreshold = 0
-    coverageThreshold = 0
-    failWhenNoMutations = false
-    skipFailingTests = true  // Important : ignore les tests qui échouent
-
-    // Exclure les tests problématiques
-    excludedTestClasses = [
-            '**.bdd.*',
-            '**.cucumber.*',
-            '**.*Cucumber*',
-            '**.*Runner*',
-            '**.SecurePluginClassLoaderTest',
-            '**.DefaultPluginManagerTest'
-    ]
-
-    excludedClasses = [
-            '**.test.*',
-            '**.mock.*',
-            '**.dto.*',
-            '**.config.*',
-            '**.Main*',
-            '**.Application*',
-            '**.bdd.*',
-            '**.cucumber.*',
-            '**.SecurePluginClassLoader',
-            '**.DefaultPluginManager'
-    ]
-
-    excludedMethods = ['main', 'toString', 'hashCode', 'equals', 'clone']
-
-    // Ajouter les arguments JVM pour headless mode
-    jvmArgs = ['-Djava.awt.headless=true']
 }
 
 // ==================== OWASP DEPENDENCY CHECK ====================
