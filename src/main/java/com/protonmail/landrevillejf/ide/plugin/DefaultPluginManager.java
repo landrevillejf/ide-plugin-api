@@ -18,7 +18,7 @@ import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class DefaultPluginManager implements PluginManager {
+public final class DefaultPluginManager implements PluginManager {
     private final ServiceRegistry serviceRegistry;
     private final EventBus eventBus;
     private final Map<String, Plugin> plugins = new HashMap<>();
@@ -54,7 +54,10 @@ public class DefaultPluginManager implements PluginManager {
         }
         this.pluginsDirectory = new File(path);
         if (!pluginsDirectory.exists()) {
-            pluginsDirectory.mkdirs();
+            boolean created = pluginsDirectory.mkdirs();
+            if (!created && log.isWarnEnabled()) {
+                log.warn("Failed to create plugins directory: {}", path);
+            }
         }
     }
 
@@ -82,7 +85,9 @@ public class DefaultPluginManager implements PluginManager {
 
     @Override
     public void shutdownAll() {
-        log.debug("Shutdown all plugins...");
+        if (log.isDebugEnabled()) {
+            log.debug("Shutdown all plugins...");
+        }
         unloadAllPlugins();
         cleanupTemporaryFiles();
         eventBus.shutdown();
@@ -93,13 +98,15 @@ public class DefaultPluginManager implements PluginManager {
             try {
                 if (tempFile.exists()) {
                     boolean deleted = tempFile.delete();
-                    if (deleted) {
+                    if (deleted && log.isDebugEnabled()) {
                         log.debug("Deleted temporary plugin file: {}", tempFile.getName());
                     }
                 }
             } catch (Exception e) {
-                log.warn("Could not delete temporary file {}: {}",
-                        tempFile.getName(), e.getMessage());
+                if (log.isWarnEnabled()) {
+                    log.warn("Could not delete temporary file {}: {}",
+                            tempFile.getName(), e.getMessage());
+                }
             }
         }
         temporaryPluginFiles.clear();
@@ -108,39 +115,56 @@ public class DefaultPluginManager implements PluginManager {
     @Override
     public void loadAllPlugins() {
         loadPluginsFromDirectory();
-        log.debug("Total plugins loaded: {} ({} from classpath, {} from directory)",
-                plugins.size(), temporaryPluginFiles.size(),
-                plugins.size() - temporaryPluginFiles.size());
+        if (log.isDebugEnabled()) {
+            log.debug("Total plugins loaded: {} ({} from classpath, {} from directory)",
+                    plugins.size(), temporaryPluginFiles.size(),
+                    plugins.size() - temporaryPluginFiles.size());
+        }
     }
 
     private void loadPluginsFromDirectory() {
         if (pluginsDirectory == null) {
-            log.warn("No external plugins directory configured");
+            if (log.isWarnEnabled()) {
+                log.warn("No external plugins directory configured");
+            }
             return;
         }
 
         if (!pluginsDirectory.exists()) {
-            log.debug("Creating external plugins directory: {}", pluginsDirectory);
-            pluginsDirectory.mkdirs();
+            if (log.isDebugEnabled()) {
+                log.debug("Creating external plugins directory: {}", pluginsDirectory);
+            }
+            boolean created = pluginsDirectory.mkdirs();
+            if (!created && log.isWarnEnabled()) {
+                log.warn("Failed to create plugins directory: {}", pluginsDirectory);
+            }
             return;
         }
 
         File[] jarFiles = pluginsDirectory.listFiles((dir, name) -> name.endsWith(".jar"));
         if (jarFiles == null || jarFiles.length == 0) {
-            log.debug("No plugins found in external directory: {}", pluginsDirectory);
+            if (log.isDebugEnabled()) {
+                log.debug("No plugins found in external directory: {}", pluginsDirectory);
+            }
             return;
         }
 
-        log.debug("Loading {} plugins from external directory: {}",
-                jarFiles.length, pluginsDirectory);
+        if (log.isDebugEnabled()) {
+            log.debug("Loading {} plugins from external directory: {}",
+                    jarFiles.length, pluginsDirectory);
+        }
 
         for (File jarFile : jarFiles) {
             try {
-                log.debug("Loading external plugin: {}", jarFile.getName());
+                if (log.isDebugEnabled()) {
+                    log.debug("Loading external plugin: {}", jarFile.getName());
+                }
                 loadPlugin(jarFile);
             } catch (Exception e) {
-                log.error("Error loading external plugin {}: {}",
-                        jarFile.getName(), e.getMessage());
+                if (log.isErrorEnabled()) {
+                    log.error("Error loading external plugin {}: {}",
+                            jarFile.getName(), e.getMessage());
+                }
             }
         }
     }
@@ -148,13 +172,17 @@ public class DefaultPluginManager implements PluginManager {
     public void loadPlugins(String pluginsDirectory) {
         // Vérifier si le paramètre est null
         if (pluginsDirectory == null) {
-            log.warn("Cannot load plugins from null directory");
+            if (log.isWarnEnabled()) {
+                log.warn("Cannot load plugins from null directory");
+            }
             return;
         }
 
         File pluginsDir = new File(pluginsDirectory);
         if (!pluginsDir.exists() || !pluginsDir.isDirectory()) {
-            log.error("Plugin directory doesn't exist: {}", pluginsDirectory);
+            if (log.isErrorEnabled()) {
+                log.error("Plugin directory doesn't exist: {}", pluginsDirectory);
+            }
             return;
         }
 
@@ -167,7 +195,9 @@ public class DefaultPluginManager implements PluginManager {
             try {
                 loadPlugin(jarFile);
             } catch (Exception e) {
-                log.error("Error loading plugin: {} {}", jarFile.getName(), e.getMessage());
+                if (log.isErrorEnabled()) {
+                    log.error("Error loading plugin: {} {}", jarFile.getName(), e.getMessage());
+                }
             }
         }
     }
@@ -184,9 +214,13 @@ public class DefaultPluginManager implements PluginManager {
                     if (cl instanceof URLClassLoader) {
                         try {
                             ((URLClassLoader) cl).close();
-                            log.debug("Closed classloader for plugin: {}", pluginName);
+                            if (log.isDebugEnabled()) {
+                                log.debug("Closed classloader for plugin: {}", pluginName);
+                            }
                         } catch (IOException e) {
-                            log.warn("Error closing classloader for plugin {}: {}", pluginName, e.getMessage());
+                            if (log.isWarnEnabled()) {
+                                log.warn("Error closing classloader for plugin {}: {}", pluginName, e.getMessage());
+                            }
                         }
                     }
 
@@ -196,9 +230,13 @@ public class DefaultPluginManager implements PluginManager {
                             plugin.getClass().getSimpleName()
                     ));
 
-                    log.debug("Plugin unloaded: {}", pluginName);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Plugin unloaded: {}", pluginName);
+                    }
                 } catch (Exception e) {
-                    log.error("Error unloading plugin: {} {}", pluginName, e.getMessage());
+                    if (log.isErrorEnabled()) {
+                        log.error("Error unloading plugin: {} {}", pluginName, e.getMessage());
+                    }
                 }
             }
         }
@@ -235,16 +273,6 @@ public class DefaultPluginManager implements PluginManager {
 
             Class<?> clazz = classLoader.loadClass(pluginClass);
             Plugin plugin = (Plugin) clazz.getDeclaredConstructor().newInstance();
-
-            // ← CRÉER LE CONTEXTE AVEC LE PLUGIN
-            /*PluginContext pluginContext = new DefaultPluginContext(
-                    serviceRegistry,
-                    new PluginEventBus(),
-                    eventBus,
-                    this,
-                    pluginDataDir,
-                    pluginName
-            );*/
 
             PluginContext pluginContext;
             if (this.context instanceof DefaultExtendedPluginContext) {
@@ -283,15 +311,21 @@ public class DefaultPluginManager implements PluginManager {
                 try {
                     plugin.enable();
                     pluginEnabledStates.put(pluginName, true);
-                    log.debug("Plugin auto-enabled: {} v{} (State: {})",
-                            pluginName, plugin.getVersion(), plugin.getState());
+                    if (log.isDebugEnabled()) {
+                        log.debug("Plugin auto-enabled: {} v{} (State: {})",
+                                pluginName, plugin.getVersion(), plugin.getState());
+                    }
                 } catch (Exception e) {
-                    log.error("Auto-enable failed for '{}': {}", pluginName, e.getMessage());
+                    if (log.isErrorEnabled()) {
+                        log.error("Auto-enable failed for '{}': {}", pluginName, e.getMessage());
+                    }
                     pluginEnabledStates.put(pluginName, false);
                 }
             } else {
-                log.debug("Plugin loaded: {} v{} (State: {})",
-                        pluginName, plugin.getVersion(), plugin.getState());
+                if (log.isDebugEnabled()) {
+                    log.debug("Plugin loaded: {} v{} (State: {})",
+                            pluginName, plugin.getVersion(), plugin.getState());
+                }
             }
 
             synchronized (plugins) {
@@ -303,7 +337,9 @@ public class DefaultPluginManager implements PluginManager {
                 try {
                     classLoader.close();
                 } catch (IOException ex) {
-                    log.warn("Error closing classloader after load failure", ex);
+                    if (log.isWarnEnabled()) {
+                        log.warn("Error closing classloader after load failure", ex);
+                    }
                 }
             }
             throw e;
@@ -312,7 +348,9 @@ public class DefaultPluginManager implements PluginManager {
                 try {
                     jar.close();
                 } catch (IOException e) {
-                    log.warn("Error closing jar file", e);
+                    if (log.isWarnEnabled()) {
+                        log.warn("Error closing jar file", e);
+                    }
                 }
             }
         }
@@ -333,7 +371,6 @@ public class DefaultPluginManager implements PluginManager {
     @Override
     public List<Plugin> getLoadedPlugins() {
         synchronized (plugins) {
-            // Faire une copie dans une nouvelle liste
             return new ArrayList<>(plugins.values());
         }
     }
@@ -349,7 +386,9 @@ public class DefaultPluginManager implements PluginManager {
 
     @Override
     public void disableAllPlugins() {
-        log.debug("=== DISABLING ALL PLUGINS ===");
+        if (log.isDebugEnabled()) {
+            log.debug("=== DISABLING ALL PLUGINS ===");
+        }
 
         // Faire une copie synchronisée pour éviter les modifications concurrentes
         List<Map.Entry<String, Plugin>> entries;
@@ -362,7 +401,9 @@ public class DefaultPluginManager implements PluginManager {
             int disabledCount = 0;
             int errorCount = 0;
 
-            log.debug("Found {} plugins to disable", totalPlugins);
+            if (log.isDebugEnabled()) {
+                log.debug("Found {} plugins to disable", totalPlugins);
+            }
 
             for (Map.Entry<String, Plugin> entry : entries) {
                 String pluginName = entry.getKey();
@@ -370,7 +411,9 @@ public class DefaultPluginManager implements PluginManager {
 
                 try {
                     if (isPluginEnabled(pluginName)) {
-                        log.debug("Disabling plugin: {} v{}", pluginName, plugin.getVersion());
+                        if (log.isDebugEnabled()) {
+                            log.debug("Disabling plugin: {} v{}", pluginName, plugin.getVersion());
+                        }
 
                         plugin.disable();
                         pluginEnabledStates.put(pluginName, false);
@@ -378,39 +421,55 @@ public class DefaultPluginManager implements PluginManager {
                         if (plugin instanceof MenuProvider) {
                             try {
                                 serviceRegistry.unregister(MenuProvider.class, (MenuProvider) plugin);
-                                log.debug("Unregistered MenuProvider for plugin: {}", pluginName);
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Unregistered MenuProvider for plugin: {}", pluginName);
+                                }
                             } catch (Exception e) {
-                                log.warn("Failed to unregister MenuProvider for plugin {}: {}",
-                                        pluginName, e.getMessage());
+                                if (log.isWarnEnabled()) {
+                                    log.warn("Failed to unregister MenuProvider for plugin {}: {}",
+                                            pluginName, e.getMessage());
+                                }
                             }
                         }
 
                         disabledCount++;
-                        log.debug("Successfully disabled plugin: {} v{}", pluginName, plugin.getVersion());
+                        if (log.isDebugEnabled()) {
+                            log.debug("Successfully disabled plugin: {} v{}", pluginName, plugin.getVersion());
+                        }
                     } else {
-                        log.debug("Plugin {} is already disabled", pluginName);
+                        if (log.isDebugEnabled()) {
+                            log.debug("Plugin {} is already disabled", pluginName);
+                        }
                     }
 
                 } catch (Exception e) {
                     errorCount++;
-                    log.error("Error disabling plugin {}: {}", pluginName, e.getMessage());
+                    if (log.isErrorEnabled()) {
+                        log.error("Error disabling plugin {}: {}", pluginName, e.getMessage());
+                    }
                 }
             }
 
-            log.debug("=== DISABLE ALL PLUGINS COMPLETE ===");
-            log.debug("Total plugins: {}", totalPlugins);
-            log.debug("Successfully disabled: {}", disabledCount);
-            log.debug("Errors: {}", errorCount);
+            if (log.isDebugEnabled()) {
+                log.debug("=== DISABLE ALL PLUGINS COMPLETE ===");
+                log.debug("Total plugins: {}", totalPlugins);
+                log.debug("Successfully disabled: {}", disabledCount);
+                log.debug("Errors: {}", errorCount);
+            }
 
             verifyAllPluginsDisabled();
 
         } catch (Exception e) {
-            log.error("Critical error in disableAllPlugins(): {}", e.getMessage(), e);
+            if (log.isErrorEnabled()) {
+                log.error("Critical error in disableAllPlugins(): {}", e.getMessage(), e);
+            }
         }
     }
 
     private void verifyAllPluginsDisabled() {
-        log.debug("Verifying all plugins are disabled...");
+        if (log.isDebugEnabled()) {
+            log.debug("Verifying all plugins are disabled...");
+        }
 
         List<Map.Entry<String, Plugin>> entries;
         synchronized (plugins) {
@@ -423,30 +482,44 @@ public class DefaultPluginManager implements PluginManager {
 
             if (isPluginEnabled(pluginName)) {
                 stillEnabled++;
-                log.warn("Plugin {} is still enabled after disableAllPlugins()", pluginName);
+                if (log.isWarnEnabled()) {
+                    log.warn("Plugin {} is still enabled after disableAllPlugins()", pluginName);
+                }
 
                 try {
                     Plugin plugin = entry.getValue();
                     plugin.disable();
                     pluginEnabledStates.put(pluginName, false);
-                    log.debug("Forced disable of plugin: {}", pluginName);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Forced disable of plugin: {}", pluginName);
+                    }
                 } catch (Exception e) {
-                    log.error("Could not force disable plugin {}: {}", pluginName, e.getMessage());
+                    if (log.isErrorEnabled()) {
+                        log.error("Could not force disable plugin {}: {}", pluginName, e.getMessage());
+                    }
                 }
             }
         }
 
         if (stillEnabled == 0) {
-            log.debug("✓ All plugins are successfully disabled");
+            if (log.isDebugEnabled()) {
+                log.debug("✓ All plugins are successfully disabled");
+            }
         } else {
-            log.warn("{} plugins were still enabled after disableAllPlugins()", stillEnabled);
+            if (log.isWarnEnabled()) {
+                log.warn("{} plugins were still enabled after disableAllPlugins()", stillEnabled);
+            }
         }
     }
 
     public void resetAllPluginStates() {
-        log.debug("Resetting all plugin states to DISABLED");
+        if (log.isDebugEnabled()) {
+            log.debug("Resetting all plugin states to DISABLED");
+        }
         pluginEnabledStates.replaceAll((n, v) -> false);
-        log.debug("Reset {} plugin states", pluginEnabledStates.size());
+        if (log.isDebugEnabled()) {
+            log.debug("Reset {} plugin states", pluginEnabledStates.size());
+        }
     }
 
     @Override
@@ -476,8 +549,10 @@ public class DefaultPluginManager implements PluginManager {
                         String pluginName = plugin.getName();
                         return isPluginEnabled(pluginName);
                     } catch (Exception e) {
-                        log.error("Error checking if plugin {} is enabled: {}",
-                                plugin.getName(), e.getMessage());
+                        if (log.isErrorEnabled()) {
+                            log.error("Error checking if plugin {} is enabled: {}",
+                                    plugin.getName(), e.getMessage());
+                        }
                         return false;
                     }
                 })
@@ -489,13 +564,17 @@ public class DefaultPluginManager implements PluginManager {
         Plugin plugin = findPluginByName(pluginName);
         if (plugin != null) {
             try {
-                log.debug("=== DISABLE PLUGIN ===");
-                log.debug("Plugin: {} v{}", pluginName, plugin.getVersion());
+                if (log.isDebugEnabled()) {
+                    log.debug("=== DISABLE PLUGIN ===");
+                    log.debug("Plugin: {} v{}", pluginName, plugin.getVersion());
+                }
 
                 // Vérifier l'état avant
                 PluginStatus currentState = plugin.getState();
                 if (currentState == PluginStatus.DISABLED) {
-                    log.debug("Plugin {} is already disabled", pluginName);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Plugin {} is already disabled", pluginName);
+                    }
                     pluginEnabledStates.put(pluginName, false);
                     return;
                 }
@@ -505,21 +584,27 @@ public class DefaultPluginManager implements PluginManager {
 
                 if (plugin instanceof MenuProvider) {
                     serviceRegistry.unregister(MenuProvider.class, (MenuProvider) plugin);
-                    log.debug("MenuProvider unregistered for plugin: {}", pluginName);
+                    if (log.isDebugEnabled()) {
+                        log.debug("MenuProvider unregistered for plugin: {}", pluginName);
+                    }
                 }
 
                 eventBus.publish(new PluginMenuRemovedEvent(pluginName, plugin.getClass().getSimpleName()));
-                log.debug("Plugin {} v{} disabled successfully", pluginName, plugin.getVersion());
+                if (log.isDebugEnabled()) {
+                    log.debug("Plugin {} v{} disabled successfully", pluginName, plugin.getVersion());
+                }
                 eventBus.publish(new PluginDisabledEvent(plugin.getClass().getSimpleName()));
 
             } catch (Exception e) {
-                log.error("Error disabling plugin {}: {}", pluginName, e.getMessage(), e);
-                // ICI, NE PAS REMETTRE À TRUE
-                // pluginEnabledStates.put(pluginName, true);
+                if (log.isErrorEnabled()) {
+                    log.error("Error disabling plugin {}: {}", pluginName, e.getMessage(), e);
+                }
                 throw new RuntimeException("Failed to disable plugin: " + pluginName, e);
             }
         } else {
-            log.warn("Plugin not found: {}", pluginName);
+            if (log.isWarnEnabled()) {
+                log.warn("Plugin not found: {}", pluginName);
+            }
             throw new IllegalArgumentException("Plugin not found: " + pluginName);
         }
     }
@@ -536,11 +621,15 @@ public class DefaultPluginManager implements PluginManager {
 
         if (plugin != null) {
             try {
-                log.debug("=== ENABLE PLUGIN ===");
-                log.debug("Plugin: {} v{}", pluginName, plugin.getVersion());
+                if (log.isDebugEnabled()) {
+                    log.debug("=== ENABLE PLUGIN ===");
+                    log.debug("Plugin: {} v{}", pluginName, plugin.getVersion());
+                }
 
                 if (isPluginEnabled(pluginName)) {
-                    log.warn("Plugin {} v{} is already enabled", pluginName, plugin.getVersion());
+                    if (log.isWarnEnabled()) {
+                        log.warn("Plugin {} v{} is already enabled", pluginName, plugin.getVersion());
+                    }
                     return;
                 }
 
@@ -550,20 +639,28 @@ public class DefaultPluginManager implements PluginManager {
                 if (plugin instanceof MenuProvider) {
                     MenuProvider menuProvider = (MenuProvider) plugin;
                     serviceRegistry.register(MenuProvider.class, menuProvider);
-                    log.debug("MenuProvider registered for plugin: {}", pluginName);
+                    if (log.isDebugEnabled()) {
+                        log.debug("MenuProvider registered for plugin: {}", pluginName);
+                    }
                 }
 
                 eventBus.publish(new PluginMenuAddedEvent(pluginName, plugin.getClass().getSimpleName()));
-                log.debug("Plugin {} v{} enabled successfully", pluginName, plugin.getVersion());
+                if (log.isDebugEnabled()) {
+                    log.debug("Plugin {} v{} enabled successfully", pluginName, plugin.getVersion());
+                }
                 eventBus.publish(new PluginEnabledEvent(plugin.getClass().getSimpleName()));
 
             } catch (Exception e) {
-                log.error("Error enabling plugin {}: {}", pluginName, e.getMessage(), e);
+                if (log.isErrorEnabled()) {
+                    log.error("Error enabling plugin {}: {}", pluginName, e.getMessage(), e);
+                }
                 pluginEnabledStates.put(pluginName, false);
                 throw new RuntimeException("Failed to enable plugin: " + pluginName, e);
             }
         } else {
-            log.warn("Plugin not found: {}", pluginName);
+            if (log.isWarnEnabled()) {
+                log.warn("Plugin not found: {}", pluginName);
+            }
             throw new IllegalArgumentException("Plugin not found: " + pluginName);
         }
     }
@@ -574,12 +671,18 @@ public class DefaultPluginManager implements PluginManager {
         if (plugin != null) {
             if (plugin.getState() != PluginStatus.ENABLED) {
                 enablePlugin(plugin.getName());
-                log.debug("Plugin {} enabled successfully.", pluginName);
+                if (log.isDebugEnabled()) {
+                    log.debug("Plugin {} enabled successfully.", pluginName);
+                }
             } else {
-                log.debug("Plugin {} is already enabled.", pluginName);
+                if (log.isDebugEnabled()) {
+                    log.debug("Plugin {} is already enabled.", pluginName);
+                }
             }
         } else {
-            log.warn("Plugin with name '{}' not found.", pluginName);
+            if (log.isWarnEnabled()) {
+                log.warn("Plugin with name '{}' not found.", pluginName);
+            }
         }
     }
 
@@ -600,24 +703,34 @@ public class DefaultPluginManager implements PluginManager {
                 properties.load(is);
                 String className = properties.getProperty(PLUGIN_CLASS_ATTRIBUTE);
                 if (className != null && !className.isBlank()) {
-                    log.debug("Found plugin class in properties file {}: {}", PLUGIN_PROPERTIES, className);
+                    if (log.isDebugEnabled()) {
+                        log.debug("Found plugin class in properties file {}: {}", PLUGIN_PROPERTIES, className);
+                    }
                     return className;
                 } else {
-                    log.error("Property {} in {} is missing or empty.", PLUGIN_CLASS_ATTRIBUTE, PLUGIN_PROPERTIES);
+                    if (log.isErrorEnabled()) {
+                        log.error("Property {} in {} is missing or empty.", PLUGIN_CLASS_ATTRIBUTE, PLUGIN_PROPERTIES);
+                    }
                 }
             } catch (IOException e) {
-                log.error("Failed to read {} from JAR: {}", PLUGIN_PROPERTIES, e.getMessage(), e);
+                if (log.isErrorEnabled()) {
+                    log.error("Failed to read {} from JAR: {}", PLUGIN_PROPERTIES, e.getMessage(), e);
+                }
             }
         }
 
         String mainClass = jarFile.getManifest().getMainAttributes().getValue(MANIFEST_PLUGIN_CLASS);
         if (mainClass != null && !mainClass.isBlank()) {
-            log.debug("Found plugin class in manifest: {}", mainClass);
+            if (log.isDebugEnabled()) {
+                log.debug("Found plugin class in manifest: {}", mainClass);
+            }
             return mainClass;
         }
 
-        log.warn("No plugin class found in JAR: {} Checked both {} and manifest attribute {}.",
-                jarFile.getName(), PLUGIN_PROPERTIES, MANIFEST_PLUGIN_CLASS);
+        if (log.isWarnEnabled()) {
+            log.warn("No plugin class found in JAR: {} Checked both {} and manifest attribute {}.",
+                    jarFile.getName(), PLUGIN_PROPERTIES, MANIFEST_PLUGIN_CLASS);
+        }
         return null;
     }
 
@@ -654,25 +767,33 @@ public class DefaultPluginManager implements PluginManager {
                                 enablePlugin(plugin.getName());
                                 plugins.put(plugin.getName(), plugin);
                                 pluginClassLoaders.put(plugin.getName(), loader);
-                                log.debug("Successfully loaded and enabled plugin: {} v{}",
-                                        plugin.getName(), plugin.getVersion());
+                                if (log.isDebugEnabled()) {
+                                    log.debug("Successfully loaded and enabled plugin: {} v{}",
+                                            plugin.getName(), plugin.getVersion());
+                                }
                                 return;
                             } else {
                                 try {
                                     loader.close();
                                 } catch (IOException e) {
-                                    log.warn("Error closing classloader for plugin {}", plugin.getName(), e);
+                                    if (log.isWarnEnabled()) {
+                                        log.warn("Error closing classloader for plugin {}", plugin.getName(), e);
+                                    }
                                 }
                             }
                         }
                     }
                 } catch (Exception e) {
-                    log.error("Failed to load plugin from {}: {}", jar.getName(), e.getMessage(), e);
+                    if (log.isErrorEnabled()) {
+                        log.error("Failed to load plugin from {}: {}", jar.getName(), e.getMessage(), e);
+                    }
                 }
             }
         }
 
-        log.warn("Plugin with name '{}' not found in directory '{}'.", pluginName, pluginsDir);
+        if (log.isWarnEnabled()) {
+            log.warn("Plugin with name '{}' not found in directory '{}'.", pluginName, pluginsDir);
+        }
     }
 
     @Override
