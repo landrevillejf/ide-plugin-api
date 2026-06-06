@@ -9,14 +9,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class DefaultPluginDependencyResolver implements PluginDependencyResolver {
+public final class DefaultPluginDependencyResolver implements PluginDependencyResolver {
 
     private final Map<String, List<PluginDependency>> dependencies = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> availablePlugins = new ConcurrentHashMap<>();
     private final Map<String, List<String>> dependents = new ConcurrentHashMap<>();
 
     public DefaultPluginDependencyResolver() {
-        log.info("DefaultPluginDependencyResolver initialized");
+        if (log.isInfoEnabled()) {
+            log.info("DefaultPluginDependencyResolver initialized");
+        }
     }
 
     @Override
@@ -35,8 +37,10 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
         // Update dependents map
         dependents.computeIfAbsent(dependencyId, k -> new CopyOnWriteArrayList<>()).add(pluginId);
 
-        log.debug("Dependency added: plugin={} depends on {} ({})",
-                pluginId, dependencyId, level);
+        if (log.isDebugEnabled()) {
+            log.debug("Dependency added: plugin={} depends on {} ({})",
+                    pluginId, dependencyId, level);
+        }
 
         return dependency;
     }
@@ -56,7 +60,9 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
             if (pluginDependents != null) {
                 pluginDependents.remove(pluginId);
             }
-            log.debug("Dependency removed: plugin={} no longer depends on {}", pluginId, dependencyId);
+            if (log.isDebugEnabled()) {
+                log.debug("Dependency removed: plugin={} no longer depends on {}", pluginId, dependencyId);
+            }
         }
 
         return removed;
@@ -97,8 +103,10 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
 
         for (PluginDependency dep : required) {
             if (!isDependencyResolved(pluginId, dep.getProviderId())) {
-                log.debug("Required dependency not resolved: plugin={} depends on {}",
-                        pluginId, dep.getProviderId());
+                if (log.isDebugEnabled()) {
+                    log.debug("Required dependency not resolved: plugin={} depends on {}",
+                            pluginId, dep.getProviderId());
+                }
                 return false;
             }
         }
@@ -137,7 +145,9 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
         try {
             buildResolutionPath(pluginId, visited, path);
         } catch (CircularDependencyException e) {
-            log.warn("Circular dependency detected for plugin {}: {}", pluginId, e.getMessage());
+            if (log.isWarnEnabled()) {
+                log.warn("Circular dependency detected for plugin {}: {}", pluginId, e.getMessage());
+            }
             return Collections.emptyList();
         }
 
@@ -235,7 +245,9 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
         info.put("version", version);
         info.put("status", "available");
         availablePlugins.put(pluginId, info);
-        log.debug("Plugin registered as available: {} version {}", pluginId, version);
+        if (log.isDebugEnabled()) {
+            log.debug("Plugin registered as available: {} version {}", pluginId, version);
+        }
     }
 
     /**
@@ -243,7 +255,9 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
      */
     public void unregisterAvailablePlugin(String pluginId) {
         availablePlugins.remove(pluginId);
-        log.debug("Plugin unregistered from available: {}", pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Plugin unregistered from available: {}", pluginId);
+        }
     }
 
     private String generateDependencyId(String pluginId, String dependencyId) {
@@ -277,8 +291,9 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
         } else if (requiredVersion.contains("-")) {
             String[] parts = requiredVersion.split("-");
             if (parts.length == 2) {
-                return compareVersions(actualVersion, parts[0]) >= 0 &&
-                        compareVersions(actualVersion, parts[1]) <= 0;
+                boolean meetsMin = compareVersions(actualVersion, parts[0]) >= 0;
+                boolean meetsMax = compareVersions(actualVersion, parts[1]) <= 0;
+                return meetsMin && meetsMax;
             }
         } else if (requiredVersion.endsWith("+")) {
             String minVersion = requiredVersion.substring(0, requiredVersion.length() - 1);
@@ -378,7 +393,9 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
 
         for (String neighbor : adjacencyList.getOrDefault(pluginId, Collections.emptyList())) {
             int depth = 1 + calculateMaxDepth(neighbor, adjacencyList);
-            maxDepth = Math.max(maxDepth, depth);
+            if (depth > maxDepth) {
+                maxDepth = depth;
+            }
         }
 
         return maxDepth;
@@ -400,7 +417,7 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
     /**
      * Implementation of PluginDependency
      */
-    private static class PluginDependencyImpl implements PluginDependency {
+    private static final class PluginDependencyImpl implements PluginDependency {
         private final String id;
         private final String pluginId;
         private final String providerId;
@@ -432,17 +449,29 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
 
         @Override
         public String getMinimumVersion() {
-            if (requiredVersion == null) return null;
-            if (requiredVersion.startsWith(">=")) return requiredVersion.substring(2);
-            if (requiredVersion.contains("-")) return requiredVersion.split("-")[0];
+            if (requiredVersion == null) {
+                return null;
+            }
+            if (requiredVersion.startsWith(">=")) {
+                return requiredVersion.substring(2);
+            }
+            if (requiredVersion.contains("-")) {
+                return requiredVersion.split("-")[0];
+            }
             return requiredVersion;
         }
 
         @Override
         public String getMaximumVersion() {
-            if (requiredVersion == null) return null;
-            if (requiredVersion.startsWith("<=")) return requiredVersion.substring(2);
-            if (requiredVersion.contains("-")) return requiredVersion.split("-")[1];
+            if (requiredVersion == null) {
+                return null;
+            }
+            if (requiredVersion.startsWith("<=")) {
+                return requiredVersion.substring(2);
+            }
+            if (requiredVersion.contains("-")) {
+                return requiredVersion.split("-")[1];
+            }
             return requiredVersion;
         }
 
@@ -471,7 +500,7 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
     /**
      * Exception for circular dependency detection
      */
-    private static class CircularDependencyException extends Exception {
+    private static final class CircularDependencyException extends Exception {
         public CircularDependencyException(String message) {
             super(message);
         }
