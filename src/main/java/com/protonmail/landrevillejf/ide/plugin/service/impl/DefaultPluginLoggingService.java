@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Slf4j
-public class DefaultPluginLoggingService implements PluginLoggingService {
+public final class DefaultPluginLoggingService implements PluginLoggingService {
 
     private final Map<String, LogLevel> logLevels = new ConcurrentHashMap<>();
     private final Map<String, List<LogEntry>> logEntries = new ConcurrentHashMap<>();
@@ -70,6 +70,7 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
                     break;
                 default:
                     System.out.println(formatted);
+                    break;
             }
         }
 
@@ -176,11 +177,14 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
 
         PrintWriter writer = null;
         try {
-            String path = filePath != null ? filePath : "logs/" + pluginId + ".log";
+            String path = (filePath != null) ? filePath : "logs/" + pluginId + ".log";
             File logFile = new File(path);
             File parentDir = logFile.getParentFile();
             if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
+                boolean created = parentDir.mkdirs();
+                if (!created && log.isWarnEnabled()) {
+                    log.warn("Failed to create directory: {}", parentDir);
+                }
             }
             writer = new PrintWriter(new FileWriter(logFile, true));
             fileWriters.put(pluginId, writer);
@@ -200,7 +204,9 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
 
     @Override
     public Map<String, Object> getStatistics(String pluginId) {
-        return statistics.getOrDefault(pluginId, Collections.emptyMap());
+        Map<String, Object> stats = statistics.getOrDefault(pluginId, Collections.emptyMap());
+        // Return a copy to avoid modification
+        return new ConcurrentHashMap<>(stats);
     }
 
     private void updateStatistics(String pluginId, LogLevel level) {
@@ -208,27 +214,30 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
         @SuppressWarnings("unchecked")
         Map<String, Integer> counts = (Map<String, Integer>) stats.computeIfAbsent("counts",
                 k -> new ConcurrentHashMap<>());
-        counts.merge(level.name(), 1, Integer::sum);
+        Integer newCount = counts.merge(level.name(), 1, Integer::sum);
         stats.put("lastLogTime", LocalDateTime.now().toString());
-        stats.put("totalLogs", counts.values().stream().mapToInt(Integer::intValue).sum());
+
+        int total = 0;
+        for (Integer value : counts.values()) {
+            total += value;
+        }
+        stats.put("totalLogs", total);
     }
 
     private String formatEntry(LogEntry entry) {
-        String stackTrace = "";
+        StringBuilder sb = new StringBuilder();
+        sb.append('[').append(entry.timestamp).append(']');
+        sb.append(" [").append(entry.pluginId).append(']');
+        sb.append(" [").append(entry.level).append(']');
+        sb.append(' ').append(entry.message);
         if (entry.cause != null) {
-            stackTrace = " - " + getStackTrace(entry.cause);
+            sb.append(" - ").append(getStackTrace(entry.cause));
         }
-        return String.format("[%s] [%s] [%s] %s%s",
-                entry.timestamp,
-                entry.pluginId,
-                entry.level,
-                entry.message,
-                stackTrace
-        );
+        return sb.toString();
     }
 
     private String formatMessage(String pluginId, String message) {
-        return String.format("[Plugin:%s] %s", pluginId, message);
+        return "[Plugin:" + pluginId + "] " + message;
     }
 
     private String getStackTrace(Throwable cause) {
@@ -248,7 +257,7 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
         fileWriters.clear();
     }
 
-    private static class LogEntry {
+    private static final class LogEntry {
         final String timestamp;
         final String pluginId;
         final LogLevel level;
