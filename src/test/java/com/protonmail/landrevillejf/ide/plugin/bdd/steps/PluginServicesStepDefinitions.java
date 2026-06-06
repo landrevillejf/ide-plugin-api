@@ -1,4 +1,4 @@
-package com.protonmail.landrevillejf.ide.plugin.cucumber;
+package com.protonmail.landrevillejf.ide.plugin.bdd.steps;
 
 import com.protonmail.landrevillejf.ide.plugin.service.*;
 import io.cucumber.java.en.And;

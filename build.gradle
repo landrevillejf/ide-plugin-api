@@ -239,12 +239,6 @@ tasks.register('cucumberTest', Test) {
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
 
-    // Filtrer uniquement les classes annotées @Suite / Cucumber
-    filter {
-        includeTestsMatching '*CucumberRunner*'
-        includeTestsMatching '*bdd.*'
-    }
-
     systemProperty 'cucumber.junit-platform.naming-strategy', 'long'
     systemProperty 'cucumber.plugin', 'pretty, html:build/reports/cucumber/cucumber-report.html, json:build/reports/cucumber/cucumber-report.json'
     systemProperty 'cucumber.glue', 'com.protonmail.landrevillejf.ide.plugin.bdd.steps'
