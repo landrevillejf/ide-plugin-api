@@ -267,7 +267,7 @@ public class UIComponentBuilder {
     public UIComponentBuilder addStatusBarComponent(final String componentId, final JComponent component) {
         return addComponent(
                 componentId,
-                UIComponent.ComponentType.STATUS_BAR_COMPONENT,
+                UIComponent.ComponentType.STATUS_BAR,
                 "",
                 component,
                 (String) null
@@ -285,7 +285,7 @@ public class UIComponentBuilder {
     public UIComponentBuilder addStatusBarComponent(final String componentId, final JComponent component, final Icon icon) {
         return addComponent(
                 componentId,
-                UIComponent.ComponentType.STATUS_BAR_COMPONENT,
+                UIComponent.ComponentType.STATUS_BAR,
                 "",
                 component,
                 icon
