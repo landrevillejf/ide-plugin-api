@@ -5,6 +5,7 @@ plugins {
     id 'info.solidsoft.pitest' version '1.19.0-rc.3' apply true
     id 'org.owasp.dependencycheck' version '12.1.1' apply true
     id 'org.sonarqube' version '5.0.0.4638'
+    id 'pmd'
 }
 
 group = 'com.protonmail.landrevillejf.ide.plugin.api'
@@ -290,4 +291,24 @@ sonar {
         property "sonar.coverage.jacoco.xmlReportPaths", "${buildDir}/reports/jacoco/test/xml/jacocoTestReport.xml"
         property "sonar.junit.reportPaths", "${buildDir}/test-results/test"
     }
+}
+
+pmd {
+    // Version de PMD à utiliser
+    toolVersion = '7.24.0'  // Vérifiez la dernière version disponible
+
+    // Afficher les violations dans la console
+    consoleOutput = true
+
+    // Arrêter le build en cas de violation (false = continuer)
+    ignoreFailures = false
+
+    // Utiliser un fichier de règles personnalisé
+    ruleSetFiles = files("config/pmd/ruleset.xml")
+
+    // Désactiver les règles par défaut (on utilise notre fichier)
+    ruleSets = []
+
+    // Nombre de threads pour l'analyse (optionnel)
+    threads = 4
 }
