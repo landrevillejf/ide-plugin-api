@@ -34,6 +34,12 @@ jobs:
       - name: Run tests
         run: ./gradlew test --no-daemon
 
+      - name: Run Cucumber tests
+        run: ./gradlew cucumberTest --no-daemon --stacktrace --continue
+
+      - name: Generate coverage report
+        run: ./gradlew jacocoTestReport --no-daemon --stacktrace
+
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
