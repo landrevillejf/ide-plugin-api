@@ -56,8 +56,14 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
         List<ValidationError> errors = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
 
-        // Get the schema for the specific path
-        Object pathSchema = getValueByPath(schema, path);
+        // Récupérer les propriétés du schéma
+        Object properties = schema.get("properties");
+        if (!(properties instanceof Map)) {
+            return ValidationResultImpl.valid();
+        }
+
+        // Chercher le chemin dans les propriétés
+        Object pathSchema = getValueByPath((Map<String, Object>) properties, path);
         if (pathSchema instanceof Map) {
             @SuppressWarnings("unchecked")
             Map<String, Object> fieldSchema = (Map<String, Object>) pathSchema;
@@ -66,7 +72,8 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
             // Check custom validator for this path
             validateCustomValidatorForPath(pluginId, path, value, errors);
         } else {
-            errors.add(new ValidationErrorImpl(path, "No schema defined for path: " + path, "SCHEMA_NOT_FOUND"));
+            // Si le chemin n'existe pas dans le schéma, pas d'erreur (valeur optionnelle)
+            // ou on peut ignorer
         }
 
         boolean isValid = errors.isEmpty();

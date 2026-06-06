@@ -315,6 +315,14 @@ public class DefaultPluginDataStore implements PluginDataStore {
     private Path getBackupPath(String pluginId, String backupId) {
         Path pluginDir = dataRoot.resolve(pluginId);
         Path backupsDir = pluginDir.resolve("backups");
+
+        // Créer le répertoire s'il n'existe pas
+        try {
+            Files.createDirectories(backupsDir);
+        } catch (IOException e) {
+            log.error("Failed to create backups directory: {}", backupsDir, e);
+        }
+
         return backupsDir.resolve(backupId + ".zip");
     }
 
@@ -474,8 +482,14 @@ public class DefaultPluginDataStore implements PluginDataStore {
                 while ((entry = zis.getNextEntry()) != null) {
                     if (entry.getName().equals("metadata.json")) {
                         byte[] metadataBytes = zis.readAllBytes();
+
+                        // ✅ CORRECTION: Utiliser TypeReference pour désérialiser correctement
                         @SuppressWarnings("unchecked")
-                        Map<String, StoredData> restored = jsonMapper.readValue(metadataBytes, Map.class);
+                        Map<String, StoredData> restored = jsonMapper.readValue(
+                                metadataBytes,
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, StoredData>>() {}
+                        );
+
                         dataMap.clear();
                         for (Map.Entry<String, StoredData> e : restored.entrySet()) {
                             dataMap.put(e.getKey(), e.getValue());
@@ -491,6 +505,10 @@ public class DefaultPluginDataStore implements PluginDataStore {
                         }
 
                         Path dataFile = getDataFile(key);
+
+                        // S'assurer que le répertoire parent existe
+                        Files.createDirectories(dataFile.getParent());
+
                         Files.copy(zis, dataFile, StandardCopyOption.REPLACE_EXISTING);
                     }
                     zis.closeEntry();
