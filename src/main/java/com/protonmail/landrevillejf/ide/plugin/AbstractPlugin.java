@@ -4,10 +4,7 @@ import com.protonmail.landrevillejf.ide.plugin.events.Event;
 import com.protonmail.landrevillejf.ide.plugin.events.EventListener;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -124,8 +121,8 @@ public abstract class AbstractPlugin implements Plugin {
             return "unknown-plugin";
         }
 
-        // Convert to lowercase
-        String id = name.toLowerCase();
+        // Convert to lowercase with explicit Locale
+        String id = name.toLowerCase(Locale.ROOT);
 
         // Replace spaces with hyphens
         id = id.replaceAll("\\s+", "-");
@@ -414,7 +411,7 @@ public abstract class AbstractPlugin implements Plugin {
     public boolean updateConfiguration(Map<String, Object> config) {
         if (validateConfiguration(config)) {
             this.config = new PluginConfig(config);
-             publishEvent(PluginEventType.CONFIG_CHANGED, config);
+            publishEvent(PluginEventType.CONFIG_CHANGED, config);
             return true;
         }
         return false;
@@ -475,8 +472,8 @@ public abstract class AbstractPlugin implements Plugin {
      */
     protected void addProvidedResource(String key, Object resource) {
         providedResources.put(key, resource);
-         publishEvent(PluginEventType.CUSTOM_EVENT,
-             Map.of("type", "RESOURCE_ADDED", "key", key, "resource", resource));
+        publishEvent(PluginEventType.CUSTOM_EVENT,
+                Map.of("type", "RESOURCE_ADDED", "key", key, "resource", resource));
     }
 
     /**
@@ -577,6 +574,10 @@ public abstract class AbstractPlugin implements Plugin {
                 onSystemEvent(eventData);
                 break;
             case CUSTOM_EVENT:
+                onCustomEvent(eventData);
+                break;
+            default:
+                // Default case for exhaustive switch
                 onCustomEvent(eventData);
                 break;
         }
@@ -828,8 +829,9 @@ public abstract class AbstractPlugin implements Plugin {
 
     @Override
     public void handleUncaughtException(Thread thread, Throwable throwable) {
-        log.error("[" + getName() + "] Uncaught exception in thread " + thread.getName() + ":");
-        throwable.printStackTrace();
+        if (log.isErrorEnabled()) {
+            log.error("[" + getName() + "] Uncaught exception in thread " + thread.getName() + ":", throwable);
+        }
 
         // Update error metrics
         metrics.put("uncaughtExceptions", ((int) metrics.getOrDefault("uncaughtExceptions", 0)) + 1);
@@ -998,7 +1000,9 @@ public abstract class AbstractPlugin implements Plugin {
      * @param message The message to log.
      */
     protected void log(String message) {
-        log.info("[{}] {}", getName(), message);
+        if (log.isInfoEnabled()) {
+            log.info("[{}] {}", getName(), message);
+        }
     }
 
     /**
@@ -1007,7 +1011,9 @@ public abstract class AbstractPlugin implements Plugin {
      * @param message The error message to log.
      */
     protected void logError(String message) {
-        log.error("[{}] ERROR: {}", getName(), message);
+        if (log.isErrorEnabled()) {
+            log.error("[{}] ERROR: {}", getName(), message);
+        }
     }
 
     /**
@@ -1016,6 +1022,8 @@ public abstract class AbstractPlugin implements Plugin {
      * @param message The debug message to log.
      */
     protected void logDebug(String message) {
-        log.info("[{}] DEBUG: {}", getName(), message);
+        if (log.isInfoEnabled()) {
+            log.info("[{}] DEBUG: {}", getName(), message);
+        }
     }
 }
