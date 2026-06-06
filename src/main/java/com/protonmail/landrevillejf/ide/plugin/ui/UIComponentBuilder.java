@@ -24,11 +24,11 @@ public class UIComponentBuilder {
      * @param context the plugin context
      * @param pluginId the ID of the plugin using this builder
      */
-    public UIComponentBuilder(PluginContext context, String pluginId) {
+    public UIComponentBuilder(final PluginContext context, final String pluginId) {
         if (context == null) {
             throw new IllegalArgumentException("context cannot be null");
         }
-        if (pluginId == null || pluginId.trim().isEmpty()) {
+        if (pluginId == null || pluginId.isBlank()) {
             throw new IllegalArgumentException("pluginId cannot be null or empty");
         }
 
@@ -46,7 +46,7 @@ public class UIComponentBuilder {
      * @param component the Swing component to display
      * @return this builder for chaining
      */
-    public UIComponentBuilder addTab(String componentId, String title, JComponent component) {
+    public UIComponentBuilder addTab(final String componentId, final String title, final JComponent component) {
         return addTab(componentId, title, component, (String) null);
     }
 
@@ -59,7 +59,7 @@ public class UIComponentBuilder {
      * @param iconPath path to the icon resource
      * @return this builder for chaining
      */
-    public UIComponentBuilder addTab(String componentId, String title, JComponent component, String iconPath) {
+    public UIComponentBuilder addTab(final String componentId, final String title, final JComponent component, final String iconPath) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.IDE_TAB,
@@ -78,7 +78,7 @@ public class UIComponentBuilder {
      * @param icon the Icon for the tab
      * @return this builder for chaining
      */
-    public UIComponentBuilder addTab(String componentId, String title, JComponent component, Icon icon) {
+    public UIComponentBuilder addTab(final String componentId, final String title, final JComponent component, final Icon icon) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.IDE_TAB,
@@ -98,7 +98,7 @@ public class UIComponentBuilder {
      * @param component the Swing component to display
      * @return this builder for chaining
      */
-    public UIComponentBuilder addBottomPanel(String componentId, String title, JComponent component) {
+    public UIComponentBuilder addBottomPanel(final String componentId, final String title, final JComponent component) {
         return addBottomPanel(componentId, title, component, (String) null);
     }
 
@@ -111,7 +111,7 @@ public class UIComponentBuilder {
      * @param iconPath path to the icon resource
      * @return this builder for chaining
      */
-    public UIComponentBuilder addBottomPanel(String componentId, String title, JComponent component, String iconPath) {
+    public UIComponentBuilder addBottomPanel(final String componentId, final String title, final JComponent component, final String iconPath) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.BOTTOM_PANEL,
@@ -130,7 +130,7 @@ public class UIComponentBuilder {
      * @param icon the Icon for the panel
      * @return this builder for chaining
      */
-    public UIComponentBuilder addBottomPanel(String componentId, String title, JComponent component, Icon icon) {
+    public UIComponentBuilder addBottomPanel(final String componentId, final String title, final JComponent component, final Icon icon) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.BOTTOM_PANEL,
@@ -150,7 +150,7 @@ public class UIComponentBuilder {
      * @param component the Swing component to display
      * @return this builder for chaining
      */
-    public UIComponentBuilder addLeftSidebar(String componentId, String title, JComponent component) {
+    public UIComponentBuilder addLeftSidebar(final String componentId, final String title, final JComponent component) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.LEFT_SIDEBAR,
@@ -169,7 +169,7 @@ public class UIComponentBuilder {
      * @param icon the Icon for the panel
      * @return this builder for chaining
      */
-    public UIComponentBuilder addLeftSidebar(String componentId, String title, JComponent component, Icon icon) {
+    public UIComponentBuilder addLeftSidebar(final String componentId, final String title, final JComponent component, final Icon icon) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.LEFT_SIDEBAR,
@@ -187,7 +187,7 @@ public class UIComponentBuilder {
      * @param component the Swing component to display
      * @return this builder for chaining
      */
-    public UIComponentBuilder addRightSidebar(String componentId, String title, JComponent component) {
+    public UIComponentBuilder addRightSidebar(final String componentId, final String title, final JComponent component) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.RIGHT_SIDEBAR,
@@ -206,7 +206,7 @@ public class UIComponentBuilder {
      * @param icon the Icon for the panel
      * @return this builder for chaining
      */
-    public UIComponentBuilder addRightSidebar(String componentId, String title, JComponent component, Icon icon) {
+    public UIComponentBuilder addRightSidebar(final String componentId, final String title, final JComponent component, final Icon icon) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.RIGHT_SIDEBAR,
@@ -226,7 +226,7 @@ public class UIComponentBuilder {
      * @param component the Swing component to display
      * @return this builder for chaining
      */
-    public UIComponentBuilder addDockablePanel(String componentId, String title, JComponent component) {
+    public UIComponentBuilder addDockablePanel(final String componentId, final String title, final JComponent component) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.DOCKABLE_PANEL,
@@ -245,7 +245,7 @@ public class UIComponentBuilder {
      * @param icon the Icon for the panel
      * @return this builder for chaining
      */
-    public UIComponentBuilder addDockablePanel(String componentId, String title, JComponent component, Icon icon) {
+    public UIComponentBuilder addDockablePanel(final String componentId, final String title, final JComponent component, final Icon icon) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.DOCKABLE_PANEL,
@@ -264,7 +264,7 @@ public class UIComponentBuilder {
      * @param component the Swing component to display in the status bar
      * @return this builder for chaining
      */
-    public UIComponentBuilder addStatusBarComponent(String componentId, JComponent component) {
+    public UIComponentBuilder addStatusBarComponent(final String componentId, final JComponent component) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.STATUS_BAR_COMPONENT,
@@ -282,7 +282,7 @@ public class UIComponentBuilder {
      * @param icon the Icon for the component
      * @return this builder for chaining
      */
-    public UIComponentBuilder addStatusBarComponent(String componentId, JComponent component, Icon icon) {
+    public UIComponentBuilder addStatusBarComponent(final String componentId, final JComponent component, final Icon icon) {
         return addComponent(
                 componentId,
                 UIComponent.ComponentType.STATUS_BAR_COMPONENT,
@@ -305,11 +305,11 @@ public class UIComponentBuilder {
      * @return this builder for chaining
      */
     public UIComponentBuilder addComponent(
-            String componentId,
-            UIComponent.ComponentType type,
-            String title,
-            JComponent component,
-            String iconPath
+            final String componentId,
+            final UIComponent.ComponentType type,
+            final String title,
+            final JComponent component,
+            final String iconPath
     ) {
         return addComponent(componentId, type, title, component, iconPath, Integer.MAX_VALUE, true);
     }
@@ -327,16 +327,16 @@ public class UIComponentBuilder {
      * @return this builder for chaining
      */
     public UIComponentBuilder addComponent(
-            String componentId,
-            UIComponent.ComponentType type,
-            String title,
-            JComponent component,
-            String iconPath,
-            int order,
-            boolean removable
+            final String componentId,
+            final UIComponent.ComponentType type,
+            final String title,
+            final JComponent component,
+            final String iconPath,
+            final int order,
+            final boolean removable
     ) {
         try {
-            UIComponent uiComponent = new UIComponent(
+            final UIComponent uiComponent = new UIComponent(
                     componentId,
                     type,
                     title,
@@ -369,11 +369,11 @@ public class UIComponentBuilder {
      * @return this builder for chaining
      */
     public UIComponentBuilder addComponent(
-            String componentId,
-            UIComponent.ComponentType type,
-            String title,
-            JComponent component,
-            Icon icon
+            final String componentId,
+            final UIComponent.ComponentType type,
+            final String title,
+            final JComponent component,
+            final Icon icon
     ) {
         return addComponent(componentId, type, title, component, icon, Integer.MAX_VALUE, true);
     }
@@ -391,16 +391,16 @@ public class UIComponentBuilder {
      * @return this builder for chaining
      */
     public UIComponentBuilder addComponent(
-            String componentId,
-            UIComponent.ComponentType type,
-            String title,
-            JComponent component,
-            Icon icon,
-            int order,
-            boolean removable
+            final String componentId,
+            final UIComponent.ComponentType type,
+            final String title,
+            final JComponent component,
+            final Icon icon,
+            final int order,
+            final boolean removable
     ) {
         try {
-            UIComponent uiComponent = new UIComponent(
+            final UIComponent uiComponent = new UIComponent(
                     componentId,
                     type,
                     title,
@@ -430,30 +430,41 @@ public class UIComponentBuilder {
      * @return the number of components successfully registered
      */
     public int registerAll() {
-        ComponentRegistry registry = this.context.getComponentRegistry();
+        final ComponentRegistry registry = this.context.getComponentRegistry();
         int registered = 0;
 
-        for (UIComponent component : this.components) {
-            try {
-                // Ajouter le clientProperty au composant AVANT l'enregistrement
-                JComponent jComponent = component.getComponent();
-                if (jComponent != null) {
-                    jComponent.putClientProperty("ui_component_id", component.getComponentId());
-                }
+        for (final UIComponent component : this.components) {
+            // Ajouter le clientProperty au composant AVANT l'enregistrement
+            final JComponent jComponent = component.getComponent();
+            if (jComponent != null) {
+                jComponent.putClientProperty("ui_component_id", component.getComponentId());
+            }
 
-                registry.registerComponent(component, this.pluginId);
-                if (log.isInfoEnabled()) {
-                    log.info("Registered component: {} of type {}", component.getComponentId(), component.getType());
-                }
+            final boolean success = registerComponent(registry, component);
+            if (success) {
                 ++registered;
-            } catch (IllegalArgumentException e) {
-                if (log.isWarnEnabled()) {
-                    log.warn("Failed to register component: {}", component.getComponentId(), e);
-                }
             }
         }
 
         return registered;
+    }
+
+    /**
+     * Register a single component.
+     */
+    private boolean registerComponent(final ComponentRegistry registry, final UIComponent component) {
+        try {
+            registry.registerComponent(component, this.pluginId);
+            if (log.isInfoEnabled()) {
+                log.info("Registered component: {} of type {}", component.getComponentId(), component.getType());
+            }
+            return true;
+        } catch (IllegalArgumentException e) {
+            if (log.isWarnEnabled()) {
+                log.warn("Failed to register component: {}", component.getComponentId(), e);
+            }
+            return false;
+        }
     }
 
     /**
@@ -462,21 +473,12 @@ public class UIComponentBuilder {
      * @param component the component to register
      * @return {@code true} if registration was successful
      */
-    public boolean register(UIComponent component) {
-        try {
-            context.getComponentRegistry().registerComponent(component, pluginId);
-            if (log.isInfoEnabled()) {
-                log.info("Registered component: {} of type {}",
-                        component.getComponentId(), component.getType());
-            }
-            return true;
-        } catch (IllegalArgumentException e) {
-            if (log.isWarnEnabled()) {
-                log.warn("Failed to register component: {}",
-                        component.getComponentId(), e);
-            }
+    public boolean register(final UIComponent component) {
+        if (component == null) {
             return false;
         }
+        final ComponentRegistry registry = context.getComponentRegistry();
+        return registerComponent(registry, component);
     }
 
     /**
@@ -485,19 +487,28 @@ public class UIComponentBuilder {
      * @return the number of components successfully unregistered
      */
     public int unregisterAll() {
-        ComponentRegistry registry = context.getComponentRegistry();
+        final ComponentRegistry registry = context.getComponentRegistry();
         int unregistered = 0;
 
-        for (UIComponent component : components) {
-            if (registry.unregisterComponent(component.getComponentId(), pluginId)) {
-                if (log.isInfoEnabled()) {
-                    log.info("Unregistered component: {}", component.getComponentId());
-                }
+        for (final UIComponent component : components) {
+            final boolean success = unregisterComponent(registry, component);
+            if (success) {
                 unregistered++;
             }
         }
 
         return unregistered;
+    }
+
+    /**
+     * Unregister a single component.
+     */
+    private boolean unregisterComponent(final ComponentRegistry registry, final UIComponent component) {
+        final boolean success = registry.unregisterComponent(component.getComponentId(), pluginId);
+        if (success && log.isInfoEnabled()) {
+            log.info("Unregistered component: {}", component.getComponentId());
+        }
+        return success;
     }
 
     /**
@@ -526,36 +537,34 @@ public class UIComponentBuilder {
      * @param componentId the ID of the component whose tab should be selected
      * @return this builder for chaining
      */
-    public UIComponentBuilder selectTab(String componentId) {
-        try {
-            // Essayer d'abord via l'EventBus
-            com.protonmail.landrevillejf.swingide.core.bus.EventBus eventBus = null;
-            try {
-                eventBus = context.getService(com.protonmail.landrevillejf.swingide.core.bus.EventBus.class);
-            } catch (Exception e) {
-                if (log.isDebugEnabled()) {
-                    log.debug("EventBus not available via service", e);
-                }
-            }
+    public UIComponentBuilder selectTab(final String componentId) {
+        publishSelectTabEvent(componentId);
+        return this;
+    }
 
-            if (eventBus != null) {
-                SelectTabEvent event = new SelectTabEvent(componentId, pluginId);
-                eventBus.publish(event);
-                if (log.isInfoEnabled()) {
-                    log.info("Published SelectTabEvent for component: {}", componentId);
-                }
-            } else {
-                if (log.isInfoEnabled()) {
-                    log.info("EventBus not available, tab '{}' registered but not auto-selected", componentId);
-                }
-                // Ne pas lancer d'exception, juste logguer
-            }
-        } catch (Exception e) {
-            if (log.isWarnEnabled()) {
-                log.warn("Could not select tab '{}': {}", componentId, e.getMessage());
+    /**
+     * Publishes a SelectTabEvent to select a tab.
+     */
+    private void publishSelectTabEvent(final String componentId) {
+        // Essayer d'abord via l'EventBus
+        com.protonmail.landrevillejf.swingide.core.bus.EventBus eventBus = null;
+        try {
+            eventBus = context.getService(com.protonmail.landrevillejf.swingide.core.bus.EventBus.class);
+        } catch (RuntimeException e) {
+            if (log.isDebugEnabled()) {
+                log.debug("EventBus not available via service", e);
             }
         }
-        return this;
+
+        if (eventBus != null) {
+            final SelectTabEvent event = new SelectTabEvent(componentId, pluginId);
+            eventBus.publish(event);
+            if (log.isInfoEnabled()) {
+                log.info("Published SelectTabEvent for component: {}", componentId);
+            }
+        } else if (log.isInfoEnabled()) {
+            log.info("EventBus not available, tab '{}' registered but not auto-selected", componentId);
+        }
     }
 
     /**
@@ -564,19 +573,17 @@ public class UIComponentBuilder {
      * @param componentId the ID of the component to unregister
      * @return true if the component was unregistered, false otherwise
      */
-    public boolean unregisterComponent(String componentId) {
-        ComponentRegistry registry = context.getComponentRegistry();
-        boolean unregistered = registry.unregisterComponent(componentId, pluginId);
+    public boolean unregisterComponent(final String componentId) {
+        final ComponentRegistry registry = context.getComponentRegistry();
+        final boolean unregistered = registry.unregisterComponent(componentId, pluginId);
         if (unregistered) {
             // Also remove from our internal list if present
             components.removeIf(comp -> comp.getComponentId().equals(componentId));
             if (log.isInfoEnabled()) {
                 log.info("Unregistered component: {}", componentId);
             }
-        } else {
-            if (log.isWarnEnabled()) {
-                log.warn("Failed to unregister component: {}", componentId);
-            }
+        } else if (log.isWarnEnabled()) {
+            log.warn("Failed to unregister component: {}", componentId);
         }
         return unregistered;
     }

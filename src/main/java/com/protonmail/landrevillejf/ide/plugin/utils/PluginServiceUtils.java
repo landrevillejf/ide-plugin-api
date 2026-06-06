@@ -4,6 +4,7 @@ import com.protonmail.landrevillejf.ide.plugin.ExtendedPluginContext;
 import com.protonmail.landrevillejf.ide.plugin.service.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,8 +24,8 @@ public final class PluginServiceUtils {
      * @return a performance report map
      */
     public static Map<String, Object> generatePerformanceReport(
-            PluginMetricsService metricsService, String pluginId) {
-        Map<String, Object> report = new HashMap<>();
+            final PluginMetricsService metricsService, final String pluginId) {
+        final Map<String, Object> report = new HashMap<>();
         report.put("metrics", metricsService.getAllMetrics(pluginId));
         report.put("timestamp", System.currentTimeMillis());
         return report;
@@ -38,9 +39,9 @@ public final class PluginServiceUtils {
      * @return a health summary map
      */
     public static Map<String, Object> generateHealthSummary(
-            PluginMonitoringService monitoringService, String pluginId) {
-        PluginMonitoringService.HealthReport report = monitoringService.getHealthReport(pluginId);
-        Map<String, Object> summary = new HashMap<>();
+            final PluginMonitoringService monitoringService, final String pluginId) {
+        final PluginMonitoringService.HealthReport report = monitoringService.getHealthReport(pluginId);
+        final Map<String, Object> summary = new HashMap<>();
         summary.put("status", report.getStatus());
         summary.put("cpuUsage", report.getCpuUsage());
         summary.put("memoryUsage", report.getMemoryUsage());
@@ -59,7 +60,7 @@ public final class PluginServiceUtils {
      * @param pluginId the plugin identifier
      * @return the backup identifier
      */
-    public static String backupPluginData(PluginDataStore dataStore, String pluginId) {
+    public static String backupPluginData(final PluginDataStore dataStore, final String pluginId) {
         return dataStore.backup(pluginId);
     }
 
@@ -72,7 +73,7 @@ public final class PluginServiceUtils {
      * @return true if restore succeeded
      */
     public static boolean restorePluginData(
-            PluginDataStore dataStore, String pluginId, String backupId) {
+            final PluginDataStore dataStore, final String pluginId, final String backupId) {
         return dataStore.restore(pluginId, backupId);
     }
 
@@ -83,8 +84,8 @@ public final class PluginServiceUtils {
      * @param pluginId the plugin identifier
      * @return list of alerts for the plugin
      */
-    public static java.util.List<PluginMonitoringService.Alert> getPluginAlerts(
-            PluginMonitoringService monitoringService, String pluginId) {
+    public static List<PluginMonitoringService.Alert> getPluginAlerts(
+            final PluginMonitoringService monitoringService, final String pluginId) {
         return monitoringService.getPluginAlerts(pluginId);
     }
 
@@ -96,7 +97,7 @@ public final class PluginServiceUtils {
      * @return true if critical alerts exist
      */
     public static boolean hasCriticalIssues(
-            PluginMonitoringService monitoringService, String pluginId) {
+            final PluginMonitoringService monitoringService, final String pluginId) {
         return getPluginAlerts(monitoringService, pluginId).stream()
                 .anyMatch(alert -> alert.getSeverity() == PluginMonitoringService.AlertSeverity.CRITICAL);
     }
@@ -109,7 +110,7 @@ public final class PluginServiceUtils {
      * @param pluginId the plugin identifier
      */
     public static void clearPluginState(
-            PluginCacheService cacheService, PluginMetricsService metricsService, String pluginId) {
+            final PluginCacheService cacheService, final PluginMetricsService metricsService, final String pluginId) {
         cacheService.clear(pluginId);
         metricsService.resetMetrics(pluginId);
     }
@@ -117,13 +118,13 @@ public final class PluginServiceUtils {
     /**
      * Validates all plugin dependencies.
      *
-     * @param dependencyResolver the dependency resolver
+     * @param resolver the dependency resolver (renamed from dependencyResolver to avoid long variable name)
      * @param pluginId the plugin identifier
      * @return validation result
      */
     public static Map<String, Object> validateAllDependencies(
-            PluginDependencyResolver dependencyResolver, String pluginId) {
-        return dependencyResolver.validateDependencies(pluginId);
+            final PluginDependencyResolver resolver, final String pluginId) {
+        return resolver.validateDependencies(pluginId);
     }
 
     /**
@@ -131,13 +132,13 @@ public final class PluginServiceUtils {
      *
      * @param permissionService the permission service
      * @param pluginId the plugin identifier
-     * @param requiredPermissions required permission IDs
+     * @param permissions required permission IDs (renamed from requiredPermissions)
      * @return true if all permissions are available
      */
     public static boolean hasRequiredPermissions(
-            PluginPermissionService permissionService, String pluginId,
-            String... requiredPermissions) {
-        return permissionService.hasAllPermissions(pluginId, requiredPermissions);
+            final PluginPermissionService permissionService, final String pluginId,
+            final String... permissions) {
+        return permissionService.hasAllPermissions(pluginId, permissions);
     }
 
     /**
@@ -148,34 +149,34 @@ public final class PluginServiceUtils {
      * @return complete diagnostic data
      */
     public static Map<String, Object> exportPluginDiagnostics(
-            ExtendedPluginContext context, String pluginId) {
-        Map<String, Object> diagnostics = new HashMap<>();
+            final ExtendedPluginContext context, final String pluginId) {
+        final Map<String, Object> diagnostics = new HashMap<>();
 
         // Health
-        PluginMonitoringService monitoring = context.getMonitoringService();
+        final PluginMonitoringService monitoring = context.getMonitoringService();
         diagnostics.put("health", generateHealthSummary(monitoring, pluginId));
 
         // Performance
-        PluginMetricsService metrics = context.getMetricsService();
+        final PluginMetricsService metrics = context.getMetricsService();
         diagnostics.put("performance", generatePerformanceReport(metrics, pluginId));
 
         // Data store stats
-        PluginDataStore dataStore = context.getDataStore();
+        final PluginDataStore dataStore = context.getDataStore();
         diagnostics.put("dataStoreStats", dataStore.getStatistics(pluginId));
 
         // Cache stats
-        PluginCacheService cache = context.getCacheService();
+        final PluginCacheService cache = context.getCacheService();
         diagnostics.put("cacheStats", cache.getStatistics(pluginId));
 
         // Alerts
         diagnostics.put("alerts", monitoring.getPluginAlerts(pluginId));
 
         // Dependencies
-        PluginDependencyResolver deps = context.getDependencyResolver();
-        diagnostics.put("dependencies", deps.validateDependencies(pluginId));
+        final PluginDependencyResolver resolver = context.getDependencyResolver();
+        diagnostics.put("dependencies", resolver.validateDependencies(pluginId));
 
         // Logs (recent)
-        PluginLoggingService logger = context.getLoggingService();
+        final PluginLoggingService logger = context.getLoggingService();
         diagnostics.put("recentLogs", logger.getRecentLogs(pluginId, 50));
 
         diagnostics.put("timestamp", System.currentTimeMillis());
@@ -190,9 +191,8 @@ public final class PluginServiceUtils {
      * @param pluginId the plugin identifier
      */
     public static void cleanupObsoleteData(
-            PluginCacheService cacheService, PluginDataStore dataStore, String pluginId) {
+            final PluginCacheService cacheService, final PluginDataStore dataStore, final String pluginId) {
         cacheService.clear(pluginId);
         dataStore.clear(pluginId);
     }
 }
-
