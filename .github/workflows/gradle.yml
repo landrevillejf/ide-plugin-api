@@ -28,6 +28,12 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Compile Java
+        run: ./gradlew compileJava compileTestJava --no-daemon --stacktrace
+
       - name: Build with Gradle
         run: ./gradlew build --no-daemon
 
