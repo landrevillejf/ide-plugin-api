@@ -32,7 +32,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     private String updateServerUrl = "https://api.ide.com/plugins";
 
     public DefaultPluginUpdateService() {
-        log.info("DefaultPluginUpdateService initialized");
+        if (log.isInfoEnabled()) {
+            log.info("DefaultPluginUpdateService initialized");
+        }
 
         // Start background update checker
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -47,7 +49,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
 
     @Override
     public PluginVersion checkForUpdates(String pluginId, UpdateChannel channel) {
-        log.debug("Checking for updates: plugin={}, channel={}", pluginId, channel);
+        if (log.isDebugEnabled()) {
+            log.debug("Checking for updates: plugin={}, channel={}", pluginId, channel);
+        }
 
         updateStatuses.put(pluginId, UpdateStatus.CHECKING);
 
@@ -58,17 +62,23 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
             if (latest != null && isNewerVersion(latest.getVersion(), currentVersion)) {
                 latestVersions.put(pluginId, latest);
                 updateStatuses.put(pluginId, UpdateStatus.AVAILABLE);
-                log.info("Update available for plugin {}: {} -> {}",
-                        pluginId, currentVersion, latest.getVersion());
+                if (log.isInfoEnabled()) {
+                    log.info("Update available for plugin {}: {} -> {}",
+                            pluginId, currentVersion, latest.getVersion());
+                }
                 return latest;
             }
 
             updateStatuses.put(pluginId, null);
-            log.debug("No updates available for plugin: {}", pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("No updates available for plugin: {}", pluginId);
+            }
             return null;
 
         } catch (Exception e) {
-            log.error("Failed to check updates for plugin: {}", pluginId, e);
+            if (log.isErrorEnabled()) {
+                log.error("Failed to check updates for plugin: {}", pluginId, e);
+            }
             updateStatuses.put(pluginId, UpdateStatus.FAILED);
             return null;
         }
@@ -83,12 +93,16 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     public boolean installUpdate(String pluginId, String version) {
         PluginVersion targetVersion = latestVersions.get(pluginId);
         if (targetVersion == null || !targetVersion.getVersion().equals(version)) {
-            log.warn("Cannot install update: version {} not available for plugin {}", version, pluginId);
+            if (log.isWarnEnabled()) {
+                log.warn("Cannot install update: version {} not available for plugin {}", version, pluginId);
+            }
             return false;
         }
 
         if (activeUpdates.containsKey(pluginId)) {
-            log.warn("Update already in progress for plugin: {}", pluginId);
+            if (log.isWarnEnabled()) {
+                log.warn("Update already in progress for plugin: {}", pluginId);
+            }
             return false;
         }
 
@@ -99,7 +113,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         activeUpdates.put(pluginId, task);
         updateExecutor.submit(task);
 
-        log.info("Update installation started for plugin: {} to version {}", pluginId, version);
+        if (log.isInfoEnabled()) {
+            log.info("Update installation started for plugin: {} to version {}", pluginId, version);
+        }
         return true;
     }
 
@@ -115,7 +131,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         updateStatuses.put(pluginId, UpdateStatus.FAILED);
         updateProgress.remove(pluginId);
 
-        log.info("Update cancelled for plugin: {}", pluginId);
+        if (log.isInfoEnabled()) {
+            log.info("Update cancelled for plugin: {}", pluginId);
+        }
         return true;
     }
 
@@ -128,7 +146,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     public boolean rollbackVersion(String pluginId, String version) {
         List<PluginVersion> history = versionHistory.get(pluginId);
         if (history == null) {
-            log.warn("No version history for plugin: {}", pluginId);
+            if (log.isWarnEnabled()) {
+                log.warn("No version history for plugin: {}", pluginId);
+            }
             return false;
         }
 
@@ -138,11 +158,15 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                 .orElse(null);
 
         if (targetVersion == null) {
-            log.warn("Version {} not found in history for plugin: {}", version, pluginId);
+            if (log.isWarnEnabled()) {
+                log.warn("Version {} not found in history for plugin: {}", version, pluginId);
+            }
             return false;
         }
 
-        log.info("Rolling back plugin {} to version {}", pluginId, version);
+        if (log.isInfoEnabled()) {
+            log.info("Rolling back plugin {} to version {}", pluginId, version);
+        }
 
         // Perform rollback
         boolean success = performRollback(pluginId, targetVersion);
@@ -151,10 +175,14 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
             currentVersions.put(pluginId, version);
             updateCount.incrementAndGet();
             successCount.incrementAndGet();
-            log.info("Rollback successful for plugin: {} to version {}", pluginId, version);
+            if (log.isInfoEnabled()) {
+                log.info("Rollback successful for plugin: {} to version {}", pluginId, version);
+            }
         } else {
             failedCount.incrementAndGet();
-            log.error("Rollback failed for plugin: {} to version {}", pluginId, version);
+            if (log.isErrorEnabled()) {
+                log.error("Rollback failed for plugin: {} to version {}", pluginId, version);
+            }
         }
 
         return success;
@@ -168,7 +196,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     @Override
     public void setUpdateChannel(String pluginId, UpdateChannel channel) {
         updateChannels.put(pluginId, channel);
-        log.debug("Update channel set for plugin {}: {}", pluginId, channel);
+        if (log.isDebugEnabled()) {
+            log.debug("Update channel set for plugin {}: {}", pluginId, channel);
+        }
     }
 
     @Override
@@ -179,7 +209,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     @Override
     public void setAutoUpdate(String pluginId, boolean enabled) {
         autoUpdateEnabled.put(pluginId, enabled);
-        log.debug("Auto-update for plugin {}: {}", pluginId, enabled);
+        if (log.isDebugEnabled()) {
+            log.debug("Auto-update for plugin {}: {}", pluginId, enabled);
+        }
 
         if (enabled) {
             // Schedule immediate check
@@ -229,7 +261,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         );
         versionHistory.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>()).add(0, versionInfo);
 
-        log.debug("Plugin version registered: {} version {}", pluginId, version);
+        if (log.isDebugEnabled()) {
+            log.debug("Plugin version registered: {} version {}", pluginId, version);
+        }
     }
 
     /**
@@ -237,7 +271,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
      */
     public void setUpdateServerUrl(String url) {
         this.updateServerUrl = url;
-        log.info("Update server URL set to: {}", url);
+        if (log.isInfoEnabled()) {
+            log.info("Update server URL set to: {}", url);
+        }
     }
 
     private void checkAllForUpdates() {
@@ -251,7 +287,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     private void checkAndAutoUpdate(String pluginId) {
         PluginVersion update = checkForUpdates(pluginId);
         if (update != null && isAutoUpdateEnabled(pluginId)) {
-            log.info("Auto-update triggered for plugin: {} to version {}", pluginId, update.getVersion());
+            if (log.isInfoEnabled()) {
+                log.info("Auto-update triggered for plugin: {} to version {}", pluginId, update.getVersion());
+            }
             installUpdate(pluginId, update.getVersion());
         }
     }
@@ -380,19 +418,25 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                     updateCount.incrementAndGet();
                     successCount.incrementAndGet();
 
-                    log.info("Update installed successfully for plugin: {} to version {}",
-                            pluginId, targetVersion.getVersion());
+                    if (log.isInfoEnabled()) {
+                        log.info("Update installed successfully for plugin: {} to version {}",
+                                pluginId, targetVersion.getVersion());
+                    }
 
                     // Notify that plugin needs restart
                     notifyRestartRequired(pluginId);
                 } else if (!cancelled) {
                     updateStatuses.put(pluginId, UpdateStatus.FAILED);
                     failedCount.incrementAndGet();
-                    log.error("Update installation failed for plugin: {}", pluginId);
+                    if (log.isErrorEnabled()) {
+                        log.error("Update installation failed for plugin: {}", pluginId);
+                    }
                 }
 
             } catch (Exception e) {
-                log.error("Error during update installation for plugin: {}", pluginId, e);
+                if (log.isErrorEnabled()) {
+                    log.error("Error during update installation for plugin: {}", pluginId, e);
+                }
                 updateStatuses.put(pluginId, UpdateStatus.FAILED);
                 failedCount.incrementAndGet();
             } finally {
@@ -407,7 +451,9 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     }
 
     private void notifyRestartRequired(String pluginId) {
-        log.info("Plugin {} requires restart to complete update", pluginId);
+        if (log.isInfoEnabled()) {
+            log.info("Plugin {} requires restart to complete update", pluginId);
+        }
         // In real implementation, show notification to user
     }
 

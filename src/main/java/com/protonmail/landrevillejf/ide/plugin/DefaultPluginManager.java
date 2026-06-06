@@ -3,7 +3,6 @@ package com.protonmail.landrevillejf.ide.plugin;
 import com.protonmail.landrevillejf.ide.plugin.events.*;
 import com.protonmail.landrevillejf.swingide.core.bus.EventBus;
 import com.protonmail.landrevillejf.swingide.core.registry.ServiceRegistry;
-import com.protonmail.landrevillejf.ide.plugin.events.*;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 

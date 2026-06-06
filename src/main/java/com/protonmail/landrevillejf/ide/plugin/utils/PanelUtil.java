@@ -40,7 +40,9 @@ public class PanelUtil {
                     response.getPanelId().equals(request.getPanelId())) {
                 future.complete(response.isSuccess());
                 if (!response.isSuccess()) {
-                    log.error("Failed to add panel: {}", response.getMessage());
+                    if (log.isErrorEnabled()) {
+                        log.error("Failed to add panel: {}", response.getMessage());
+                    }
                 }
             }
         });
@@ -72,7 +74,9 @@ public class PanelUtil {
         try {
             return addPanel(title, icon, panel, location).get(5, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error("Error adding panel synchronously", e);
+            if (log.isErrorEnabled()) {
+                log.error("Error adding panel synchronously", e);
+            }
             return false;
         }
     }

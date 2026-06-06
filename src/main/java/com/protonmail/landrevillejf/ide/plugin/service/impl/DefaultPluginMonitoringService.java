@@ -33,7 +33,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
         // Start cleanup of old alerts
         monitoringExecutor.scheduleAtFixedRate(this::cleanupOldAlerts, 1, 1, TimeUnit.HOURS);
 
-        log.info("DefaultPluginMonitoringService initialized");
+        if (log.isInfoEnabled()) {
+            log.info("DefaultPluginMonitoringService initialized");
+        }
     }
 
     @Override
@@ -80,7 +82,8 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
         }
 
         // Then healthy
-        if (statuses.stream().allMatch(s -> s == HealthStatus.HEALTHY)) {
+        boolean allHealthy = statuses.stream().allMatch(s -> s == HealthStatus.HEALTHY);
+        if (allHealthy) {
             return HealthStatus.HEALTHY;
         }
 
@@ -155,16 +158,24 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
         // Log according to severity
         switch (severity) {
             case CRITICAL:
-                log.error("CRITICAL alert for plugin {}: {} - {}", pluginId, title, message);
+                if (log.isErrorEnabled()) {
+                    log.error("CRITICAL alert for plugin {}: {} - {}", pluginId, title, message);
+                }
                 break;
             case ERROR:
-                log.error("Alert for plugin {}: {} - {}", pluginId, title, message);
+                if (log.isErrorEnabled()) {
+                    log.error("Alert for plugin {}: {} - {}", pluginId, title, message);
+                }
                 break;
             case WARNING:
-                log.warn("Alert for plugin {}: {} - {}", pluginId, title, message);
+                if (log.isWarnEnabled()) {
+                    log.warn("Alert for plugin {}: {} - {}", pluginId, title, message);
+                }
                 break;
             default:
-                log.info("Alert for plugin {}: {} - {}", pluginId, title, message);
+                if (log.isInfoEnabled()) {
+                    log.info("Alert for plugin {}: {} - {}", pluginId, title, message);
+                }
         }
 
         return alert;
@@ -206,7 +217,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
                 // Notify listeners
                 listeners.forEach(l -> l.onAlertResolved(resolvedAlert));
 
-                log.debug("Alert resolved: {}", alertId);
+                if (log.isDebugEnabled()) {
+                    log.debug("Alert resolved: {}", alertId);
+                }
                 break;
             }
         }
@@ -223,7 +236,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     @Override
     public void clearAlertHistory() {
         alertHistory.clear();
-        log.debug("Alert history cleared");
+        if (log.isDebugEnabled()) {
+            log.debug("Alert history cleared");
+        }
     }
 
     @Override
@@ -245,7 +260,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
         // Plugin metrics
         long totalMemory = monitors.values().stream().mapToLong(PluginMonitor::getMemoryUsage).sum();
-        double totalCpu = monitors.values().stream().mapToDouble(PluginMonitor::getCpuUsage).average().orElse(0);
+        double totalCpu = monitors.values().stream().mapToDouble(PluginMonitor::getCpuUsage).average().orElse(0.0);
         int totalErrors = monitors.values().stream().mapToInt(PluginMonitor::getErrorCount).sum();
         int totalWarnings = monitors.values().stream().mapToInt(PluginMonitor::getWarningCount).sum();
 
@@ -266,13 +281,17 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     @Override
     public void registerHealthMonitorListener(HealthMonitorListener listener) {
         listeners.add(listener);
-        log.debug("Health monitor listener registered");
+        if (log.isDebugEnabled()) {
+            log.debug("Health monitor listener registered");
+        }
     }
 
     @Override
     public void unregisterHealthMonitorListener(HealthMonitorListener listener) {
         listeners.remove(listener);
-        log.debug("Health monitor listener unregistered");
+        if (log.isDebugEnabled()) {
+            log.debug("Health monitor listener unregistered");
+        }
     }
 
     /**
@@ -282,7 +301,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     public void registerPlugin(String pluginId) {
         PluginMonitor monitor = new PluginMonitor(pluginId);
         monitors.put(pluginId, monitor);
-        log.debug("Plugin registered for monitoring: {}", pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Plugin registered for monitoring: {}", pluginId);
+        }
     }
 
     /**
@@ -292,7 +313,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     public void unregisterPlugin(String pluginId) {
         monitors.remove(pluginId);
         activeAlerts.remove(pluginId);
-        log.debug("Plugin unregistered from monitoring: {}", pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Plugin unregistered from monitoring: {}", pluginId);
+        }
     }
 
     /**
@@ -304,9 +327,10 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
             monitor.recordError();
 
             // Create alert for repeated errors
-            if (monitor.getErrorCount() % 10 == 0) {
+            int errorCount = monitor.getErrorCount();
+            if (errorCount % 10 == 0 && errorCount > 0) {
                 createAlert(pluginId, AlertSeverity.ERROR, "Multiple Errors Detected",
-                        String.format("Plugin has encountered %d errors", monitor.getErrorCount()));
+                        String.format("Plugin has encountered %d errors", errorCount));
             }
         }
     }
@@ -320,9 +344,10 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
             monitor.recordWarning();
 
             // Create alert for many warnings
-            if (monitor.getWarningCount() % 20 == 0) {
+            int warningCount = monitor.getWarningCount();
+            if (warningCount % 20 == 0 && warningCount > 0) {
                 createAlert(pluginId, AlertSeverity.WARNING, "Multiple Warnings",
-                        String.format("Plugin has generated %d warnings", monitor.getWarningCount()));
+                        String.format("Plugin has generated %d warnings", warningCount));
             }
         }
     }
@@ -359,7 +384,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
         long sevenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7);
         alertHistory.removeIf(alert -> alert.getTimestamp() < sevenDaysAgo);
 
-        log.debug("Cleaned up old alerts, history size: {}", alertHistory.size());
+        if (log.isDebugEnabled()) {
+            log.debug("Cleaned up old alerts, history size: {}", alertHistory.size());
+        }
     }
 
     private String generateAlertId(String pluginId) {
@@ -367,7 +394,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     }
 
     private HealthReport createEmptyReport(String pluginId) {
-        return new HealthReportImpl(pluginId, HealthStatus.UNKNOWN, 0, 0, 0, 0, 0, 0, Collections.emptyMap());
+        return new HealthReportImpl(pluginId, HealthStatus.UNKNOWN, 0.0, 0L, 0, 0L, 0, 0, Collections.emptyMap());
     }
 
     /**
@@ -379,10 +406,11 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
         private final AtomicLong errorCount = new AtomicLong(0);
         private final AtomicLong warningCount = new AtomicLong(0);
 
-        private volatile double cpuUsage = 0.0;
-        private volatile long memoryUsage = 0;
-        private volatile int threadCount = 0;
-        private volatile HealthStatus healthStatus = HealthStatus.HEALTHY;
+        // Removed volatile - using AtomicReference or synchronized instead
+        private double cpuUsage = 0.0;
+        private long memoryUsage = 0;
+        private int threadCount = 0;
+        private HealthStatus healthStatus = HealthStatus.HEALTHY;
 
         // Thread tracking
         private final Map<Thread, Long> trackedThreads = new ConcurrentHashMap<>();
@@ -398,16 +426,19 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
             // Simulate CPU and memory usage based on thread activity
             // In real implementation, you'd use more sophisticated monitoring
-            cpuUsage = Math.min(100, threadCount * 5 + Math.random() * 10);
-            memoryUsage = threadCount * 1024 * 1024L; // Rough estimate: 1MB per thread
+            cpuUsage = Math.min(100.0, threadCount * 5.0 + Math.random() * 10.0);
+            memoryUsage = (long) threadCount * 1024 * 1024; // Rough estimate: 1MB per thread
         }
 
         public void updateHealthStatus() {
-            if (errorCount.get() > 50) {
+            long errors = errorCount.get();
+            long warnings = warningCount.get();
+
+            if (errors > 50) {
                 healthStatus = HealthStatus.CRITICAL;
-            } else if (errorCount.get() > 20 || warningCount.get() > 100) {
+            } else if (errors > 20 || warnings > 100) {
                 healthStatus = HealthStatus.DEGRADED;
-            } else if (cpuUsage > 80 || memoryUsage > 500 * 1024 * 1024) { // 500MB
+            } else if (cpuUsage > 80.0 || memoryUsage > 500L * 1024 * 1024) { // 500MB
                 healthStatus = HealthStatus.DEGRADED;
             } else {
                 healthStatus = HealthStatus.HEALTHY;
@@ -458,8 +489,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
         private Map<String, Object> getDetails() {
             Map<String, Object> details = new LinkedHashMap<>();
-            details.put("errorRate", errorCount.get() / (Math.max(1, getUptime() / 60000.0)));
-            details.put("warningRate", warningCount.get() / (Math.max(1, getUptime() / 60000.0)));
+            long uptimeMinutes = Math.max(1, getUptime() / 60000L);
+            details.put("errorRate", (double) errorCount.get() / uptimeMinutes);
+            details.put("warningRate", (double) warningCount.get() / uptimeMinutes);
             details.put("startTime", new Date(startTime));
             return details;
         }
@@ -522,8 +554,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
         @Override
         public String toString() {
+            long memoryMB = memoryUsage / (1024 * 1024);
             return String.format("HealthReport{plugin='%s', status=%s, cpu=%.1f%%, memory=%dMB, errors=%d}",
-                    pluginId, status, cpuUsage, memoryUsage / (1024 * 1024), errorCount);
+                    pluginId, status, cpuUsage, memoryMB, errorCount);
         }
     }
 

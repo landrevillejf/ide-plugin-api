@@ -33,7 +33,9 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
     @Override
     public void setLogLevel(String pluginId, LogLevel level) {
         logLevels.put(pluginId, level);
-        log.debug("Set log level for plugin {} to {}", pluginId, level);
+        if (log.isDebugEnabled()) {
+            log.debug("Set log level for plugin {} to {}", pluginId, level);
+        }
     }
 
     @Override
@@ -85,23 +87,38 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
         String slf4jMessage = formatMessage(pluginId, message);
         switch (level) {
             case TRACE:
-                log.trace(slf4jMessage);
+                if (log.isTraceEnabled()) {
+                    log.trace(slf4jMessage);
+                }
                 break;
             case DEBUG:
-                log.debug(slf4jMessage);
+                if (log.isDebugEnabled()) {
+                    log.debug(slf4jMessage);
+                }
                 break;
             case INFO:
-                log.info(slf4jMessage);
+                if (log.isInfoEnabled()) {
+                    log.info(slf4jMessage);
+                }
                 break;
             case WARN:
-                log.warn(slf4jMessage);
+                if (log.isWarnEnabled()) {
+                    log.warn(slf4jMessage);
+                }
                 break;
             case ERROR:
             case FATAL:
-                if (cause != null) {
-                    log.error(slf4jMessage, cause);
-                } else {
-                    log.error(slf4jMessage);
+                if (log.isErrorEnabled()) {
+                    if (cause != null) {
+                        log.error(slf4jMessage, cause);
+                    } else {
+                        log.error(slf4jMessage);
+                    }
+                }
+                break;
+            default:
+                if (log.isInfoEnabled()) {
+                    log.info(slf4jMessage);
                 }
                 break;
         }
@@ -118,7 +135,9 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
         List<LogEntry> entries = logEntries.get(pluginId);
         if (entries != null) {
             entries.clear();
-            log.debug("Cleared logs for plugin {}", pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Cleared logs for plugin {}", pluginId);
+            }
         }
     }
 
@@ -140,7 +159,9 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
     @Override
     public void setConsoleOutput(String pluginId, boolean enabled) {
         consoleOutput.put(pluginId, enabled);
-        log.debug("Set console output for plugin {} to {}", pluginId, enabled);
+        if (log.isDebugEnabled()) {
+            log.debug("Set console output for plugin {} to {}", pluginId, enabled);
+        }
     }
 
     @Override
@@ -153,15 +174,27 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
             return;
         }
 
+        PrintWriter writer = null;
         try {
             String path = filePath != null ? filePath : "logs/" + pluginId + ".log";
             File logFile = new File(path);
-            logFile.getParentFile().mkdirs();
-            PrintWriter writer = new PrintWriter(new FileWriter(logFile, true));
+            File parentDir = logFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            writer = new PrintWriter(new FileWriter(logFile, true));
             fileWriters.put(pluginId, writer);
-            log.debug("Enabled file output for plugin {} at {}", pluginId, path);
+            if (log.isDebugEnabled()) {
+                log.debug("Enabled file output for plugin {} at {}", pluginId, path);
+            }
         } catch (Exception e) {
-            log.error("Failed to set file output for plugin {}", pluginId, e);
+            if (log.isErrorEnabled()) {
+                log.error("Failed to set file output for plugin {}", pluginId, e);
+            }
+            // Close the writer if it was created but put failed
+            if (writer != null) {
+                writer.close();
+            }
         }
     }
 
@@ -172,19 +205,25 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
 
     private void updateStatistics(String pluginId, LogLevel level) {
         Map<String, Object> stats = statistics.computeIfAbsent(pluginId, k -> new ConcurrentHashMap<>());
-        Map<String, Integer> counts = (Map<String, Integer>) stats.computeIfAbsent("counts", k -> new ConcurrentHashMap<>());
+        @SuppressWarnings("unchecked")
+        Map<String, Integer> counts = (Map<String, Integer>) stats.computeIfAbsent("counts",
+                k -> new ConcurrentHashMap<>());
         counts.merge(level.name(), 1, Integer::sum);
         stats.put("lastLogTime", LocalDateTime.now().toString());
         stats.put("totalLogs", counts.values().stream().mapToInt(Integer::intValue).sum());
     }
 
     private String formatEntry(LogEntry entry) {
+        String stackTrace = "";
+        if (entry.cause != null) {
+            stackTrace = " - " + getStackTrace(entry.cause);
+        }
         return String.format("[%s] [%s] [%s] %s%s",
                 entry.timestamp,
                 entry.pluginId,
                 entry.level,
                 entry.message,
-                entry.cause != null ? " - " + getStackTrace(entry.cause) : ""
+                stackTrace
         );
     }
 
@@ -202,8 +241,11 @@ public class DefaultPluginLoggingService implements PluginLoggingService {
 
     private void closeAllWriters() {
         for (PrintWriter writer : fileWriters.values()) {
-            writer.close();
+            if (writer != null) {
+                writer.close();
+            }
         }
+        fileWriters.clear();
     }
 
     private static class LogEntry {

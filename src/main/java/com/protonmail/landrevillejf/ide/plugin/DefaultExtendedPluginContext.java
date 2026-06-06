@@ -3,7 +3,6 @@ package com.protonmail.landrevillejf.ide.plugin;
 import com.protonmail.landrevillejf.ide.plugin.service.*;
 import com.protonmail.landrevillejf.swingide.core.bus.EventBus;
 import com.protonmail.landrevillejf.swingide.core.registry.ServiceRegistry;
-import com.protonmail.landrevillejf.ide.plugin.service.*;
 
 import java.io.File;
 import java.util.concurrent.ConcurrentHashMap;

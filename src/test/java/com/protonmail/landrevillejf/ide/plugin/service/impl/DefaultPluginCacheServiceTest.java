@@ -9,8 +9,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.concurrent.TimeUnit;
-
 class DefaultPluginCacheServiceTest {
 
     private DefaultPluginCacheService cacheService;

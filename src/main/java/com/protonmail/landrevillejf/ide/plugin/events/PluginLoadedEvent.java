@@ -1,5 +1,8 @@
 package com.protonmail.landrevillejf.ide.plugin.events;
 
+import lombok.Getter;
+
+@Getter
 public class PluginLoadedEvent extends BaseEvent {
     private final String pluginId;
     private final String pluginName;
@@ -12,17 +15,6 @@ public class PluginLoadedEvent extends BaseEvent {
         this.pluginVersion = pluginVersion;
     }
 
-    public String getPluginId() {
-        return pluginId;
-    }
-
-    public String getPluginName() {
-        return pluginName;
-    }
-
-    public String getPluginVersion() {
-        return pluginVersion;
-    }
 }
 
 

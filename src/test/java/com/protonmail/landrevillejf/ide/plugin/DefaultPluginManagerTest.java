@@ -3,7 +3,10 @@ package com.protonmail.landrevillejf.ide.plugin;
 import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import com.protonmail.landrevillejf.swingide.core.bus.EventBus;
 import com.protonmail.landrevillejf.swingide.core.registry.ServiceRegistry;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;

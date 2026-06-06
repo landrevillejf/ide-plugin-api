@@ -1,8 +1,8 @@
 package com.protonmail.landrevillejf.ide.plugin;
 
+import com.protonmail.landrevillejf.ide.plugin.ui.UIComponentAccessor;
 import com.protonmail.landrevillejf.swingide.core.bus.EventBus;
 import com.protonmail.landrevillejf.swingide.core.registry.ServiceRegistry;
-import com.protonmail.landrevillejf.ide.plugin.ui.UIComponentAccessor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

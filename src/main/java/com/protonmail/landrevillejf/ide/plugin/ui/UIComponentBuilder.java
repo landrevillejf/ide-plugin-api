@@ -8,7 +8,7 @@ import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
 
- /**
+/**
  * @author landrevillejf
  * @version 1.1.0
  */
@@ -346,9 +346,13 @@ public class UIComponentBuilder {
                     removable
             );
             components.add(uiComponent);
-            log.debug("Added component to builder: {}", componentId);
+            if (log.isDebugEnabled()) {
+                log.debug("Added component to builder: {}", componentId);
+            }
         } catch (IllegalArgumentException e) {
-            log.error("Failed to add component: {}", componentId, e);
+            if (log.isErrorEnabled()) {
+                log.error("Failed to add component: {}", componentId, e);
+            }
             throw e;
         }
         return this;
@@ -406,9 +410,13 @@ public class UIComponentBuilder {
                     removable
             );
             components.add(uiComponent);
-            log.debug("Added component to builder: {}", componentId);
+            if (log.isDebugEnabled()) {
+                log.debug("Added component to builder: {}", componentId);
+            }
         } catch (IllegalArgumentException e) {
-            log.error("Failed to add component: {}", componentId, e);
+            if (log.isErrorEnabled()) {
+                log.error("Failed to add component: {}", componentId, e);
+            }
             throw e;
         }
         return this;
@@ -425,7 +433,7 @@ public class UIComponentBuilder {
         ComponentRegistry registry = this.context.getComponentRegistry();
         int registered = 0;
 
-        for(UIComponent component : this.components) {
+        for (UIComponent component : this.components) {
             try {
                 // Ajouter le clientProperty au composant AVANT l'enregistrement
                 JComponent jComponent = component.getComponent();
@@ -434,10 +442,14 @@ public class UIComponentBuilder {
                 }
 
                 registry.registerComponent(component, this.pluginId);
-                log.info("Registered component: {} of type {}", component.getComponentId(), component.getType());
+                if (log.isInfoEnabled()) {
+                    log.info("Registered component: {} of type {}", component.getComponentId(), component.getType());
+                }
                 ++registered;
             } catch (IllegalArgumentException e) {
-                log.warn("Failed to register component: {}", component.getComponentId(), e);
+                if (log.isWarnEnabled()) {
+                    log.warn("Failed to register component: {}", component.getComponentId(), e);
+                }
             }
         }
 
@@ -453,12 +465,16 @@ public class UIComponentBuilder {
     public boolean register(UIComponent component) {
         try {
             context.getComponentRegistry().registerComponent(component, pluginId);
-            log.info("Registered component: {} of type {}",
-                    component.getComponentId(), component.getType());
+            if (log.isInfoEnabled()) {
+                log.info("Registered component: {} of type {}",
+                        component.getComponentId(), component.getType());
+            }
             return true;
         } catch (IllegalArgumentException e) {
-            log.warn("Failed to register component: {}",
-                    component.getComponentId(), e);
+            if (log.isWarnEnabled()) {
+                log.warn("Failed to register component: {}",
+                        component.getComponentId(), e);
+            }
             return false;
         }
     }
@@ -474,7 +490,9 @@ public class UIComponentBuilder {
 
         for (UIComponent component : components) {
             if (registry.unregisterComponent(component.getComponentId(), pluginId)) {
-                log.info("Unregistered component: {}", component.getComponentId());
+                if (log.isInfoEnabled()) {
+                    log.info("Unregistered component: {}", component.getComponentId());
+                }
                 unregistered++;
             }
         }
@@ -515,19 +533,27 @@ public class UIComponentBuilder {
             try {
                 eventBus = context.getService(com.protonmail.landrevillejf.swingide.core.bus.EventBus.class);
             } catch (Exception e) {
-                log.debug("EventBus not available via service", e);
+                if (log.isDebugEnabled()) {
+                    log.debug("EventBus not available via service", e);
+                }
             }
 
             if (eventBus != null) {
                 SelectTabEvent event = new SelectTabEvent(componentId, pluginId);
                 eventBus.publish(event);
-                log.info("Published SelectTabEvent for component: {}", componentId);
+                if (log.isInfoEnabled()) {
+                    log.info("Published SelectTabEvent for component: {}", componentId);
+                }
             } else {
-                log.info("EventBus not available, tab '{}' registered but not auto-selected", componentId);
+                if (log.isInfoEnabled()) {
+                    log.info("EventBus not available, tab '{}' registered but not auto-selected", componentId);
+                }
                 // Ne pas lancer d'exception, juste logguer
             }
         } catch (Exception e) {
-            log.warn("Could not select tab '{}': {}", componentId, e.getMessage());
+            if (log.isWarnEnabled()) {
+                log.warn("Could not select tab '{}': {}", componentId, e.getMessage());
+            }
         }
         return this;
     }
@@ -544,9 +570,13 @@ public class UIComponentBuilder {
         if (unregistered) {
             // Also remove from our internal list if present
             components.removeIf(comp -> comp.getComponentId().equals(componentId));
-            log.info("Unregistered component: {}", componentId);
+            if (log.isInfoEnabled()) {
+                log.info("Unregistered component: {}", componentId);
+            }
         } else {
-            log.warn("Failed to unregister component: {}", componentId);
+            if (log.isWarnEnabled()) {
+                log.warn("Failed to unregister component: {}", componentId);
+            }
         }
         return unregistered;
     }

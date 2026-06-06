@@ -21,14 +21,18 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
     public DefaultPluginPermissionService() {
         initializeDefaultPermissions();
         initializeDefaultRoles();
-        log.info("DefaultPluginPermissionService initialized");
+        if (log.isInfoEnabled()) {
+            log.info("DefaultPluginPermissionService initialized");
+        }
     }
 
     @Override
     public boolean grantPermission(String pluginId, String permissionId) {
         Permission permission = permissions.get(permissionId);
         if (permission == null) {
-            log.warn("Cannot grant permission '{}' to plugin '{}' - permission not found", permissionId, pluginId);
+            if (log.isWarnEnabled()) {
+                log.warn("Cannot grant permission '{}' to plugin '{}' - permission not found", permissionId, pluginId);
+            }
             return false;
         }
 
@@ -36,7 +40,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         boolean granted = perms.add(permissionId);
 
         if (granted) {
-            log.debug("Permission '{}' granted to plugin '{}'", permissionId, pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Permission '{}' granted to plugin '{}'", permissionId, pluginId);
+            }
             addAuditEntry(pluginId, "GRANT_PERMISSION", permissionId, null);
         }
 
@@ -52,7 +58,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
 
         boolean revoked = perms.remove(permissionId);
         if (revoked) {
-            log.debug("Permission '{}' revoked from plugin '{}'", permissionId, pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Permission '{}' revoked from plugin '{}'", permissionId, pluginId);
+            }
             addAuditEntry(pluginId, "REVOKE_PERMISSION", permissionId, null);
         }
 
@@ -128,7 +136,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
     public boolean assignRole(String pluginId, String roleId) {
         Role role = roles.get(roleId);
         if (role == null) {
-            log.warn("Cannot assign role '{}' to plugin '{}' - role not found", roleId, pluginId);
+            if (log.isWarnEnabled()) {
+                log.warn("Cannot assign role '{}' to plugin '{}' - role not found", roleId, pluginId);
+            }
             return false;
         }
 
@@ -136,7 +146,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         boolean assigned = pluginRoleList.add(roleId);
 
         if (assigned) {
-            log.debug("Role '{}' assigned to plugin '{}'", roleId, pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Role '{}' assigned to plugin '{}'", roleId, pluginId);
+            }
             addAuditEntry(pluginId, "ASSIGN_ROLE", roleId, null);
         }
 
@@ -152,7 +164,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
 
         boolean removed = pluginRoleList.remove(roleId);
         if (removed) {
-            log.debug("Role '{}' removed from plugin '{}'", roleId, pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Role '{}' removed from plugin '{}'", roleId, pluginId);
+            }
             addAuditEntry(pluginId, "REMOVE_ROLE", roleId, null);
         }
 
@@ -171,23 +185,31 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
     @Override
     public Permission createPermission(String permissionId, String description, String category) {
         if (permissions.containsKey(permissionId)) {
-            log.warn("Permission '{}' already exists", permissionId);
+            if (log.isWarnEnabled()) {
+                log.warn("Permission '{}' already exists", permissionId);
+            }
             return permissions.get(permissionId);
         }
 
         PermissionImpl permission = new PermissionImpl(permissionId, description, category, false);
         permissions.put(permissionId, permission);
-        log.debug("Permission created: id={}, category={}", permissionId, category);
+        if (log.isDebugEnabled()) {
+            log.debug("Permission created: id={}, category={}", permissionId, category);
+        }
         return permission;
     }
 
     @Override
     public void registerSystemPermission(Permission permission) {
         if (permissions.containsKey(permission.getId())) {
-            log.warn("System permission '{}' already exists, overriding", permission.getId());
+            if (log.isWarnEnabled()) {
+                log.warn("System permission '{}' already exists, overriding", permission.getId());
+            }
         }
         permissions.put(permission.getId(), permission);
-        log.debug("System permission registered: {}", permission.getId());
+        if (log.isDebugEnabled()) {
+            log.debug("System permission registered: {}", permission.getId());
+        }
     }
 
     @Override
@@ -210,13 +232,17 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
     @Override
     public Role createRole(String roleId, String name, String description) {
         if (roles.containsKey(roleId)) {
-            log.warn("Role '{}' already exists", roleId);
+            if (log.isWarnEnabled()) {
+                log.warn("Role '{}' already exists", roleId);
+            }
             return roles.get(roleId);
         }
 
         RoleImpl role = new RoleImpl(roleId, name, description);
         roles.put(roleId, role);
-        log.debug("Role created: id={}, name={}", roleId, name);
+        if (log.isDebugEnabled()) {
+            log.debug("Role created: id={}, name={}", roleId, name);
+        }
         return role;
     }
 
@@ -254,7 +280,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         List<AuditEntry> entries = auditLogs.get(pluginId);
         if (entries != null) {
             entries.clear();
-            log.debug("Audit log cleared for plugin '{}'", pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Audit log cleared for plugin '{}'", pluginId);
+            }
         }
     }
 
@@ -351,7 +379,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
             admin.addPermission(permission.getId());
         }
 
-        log.info("Default roles initialized: guest, user, developer, admin");
+        if (log.isInfoEnabled()) {
+            log.info("Default roles initialized: guest, user, developer, admin");
+        }
     }
 
     private void addAuditEntry(String pluginId, String action, String resourceId, String details) {
@@ -396,7 +426,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
             PermissionImpl that = (PermissionImpl) o;
             return Objects.equals(id, that.id);
         }
@@ -443,7 +475,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         public boolean addPermission(String permissionId) {
             boolean added = permissionIds.add(permissionId);
             if (added) {
-                log.debug("Permission '{}' added to role '{}'", permissionId, id);
+                if (log.isDebugEnabled()) {
+                    log.debug("Permission '{}' added to role '{}'", permissionId, id);
+                }
             }
             return added;
         }
@@ -452,7 +486,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         public boolean removePermission(String permissionId) {
             boolean removed = permissionIds.remove(permissionId);
             if (removed) {
-                log.debug("Permission '{}' removed from role '{}'", permissionId, id);
+                if (log.isDebugEnabled()) {
+                    log.debug("Permission '{}' removed from role '{}'", permissionId, id);
+                }
             }
             return removed;
         }
@@ -460,7 +496,9 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
             RoleImpl role = (RoleImpl) o;
             return Objects.equals(id, role.id);
         }

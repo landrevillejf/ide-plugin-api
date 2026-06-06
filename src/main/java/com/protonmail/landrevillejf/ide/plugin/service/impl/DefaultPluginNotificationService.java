@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +28,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
     public DefaultPluginNotificationService() {
         // Cleanup old notifications every hour
         cleanupExecutor.scheduleAtFixedRate(this::cleanupOldNotifications, 1, 1, TimeUnit.HOURS);
-        log.info("DefaultPluginNotificationService initialized");
+        if (log.isInfoEnabled()) {
+            log.info("DefaultPluginNotificationService initialized");
+        }
     }
 
     @Override
@@ -64,8 +68,10 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
         // Auto-dismiss based on priority
         scheduleAutoDismiss(notification);
 
-        log.debug("Notification sent: plugin={}, type={}, priority={}, title={}",
-                pluginId, type, priority, title);
+        if (log.isDebugEnabled()) {
+            log.debug("Notification sent: plugin={}, type={}, priority={}, title={}",
+                    pluginId, type, priority, title);
+        }
 
         return notificationId;
     }
@@ -92,8 +98,10 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
         // Show in UI with actions
         showInUIWithActions(notification);
 
-        log.debug("Notification with actions sent: plugin={}, type={}, priority={}, title={}",
-                pluginId, type, priority, title);
+        if (log.isDebugEnabled()) {
+            log.debug("Notification with actions sent: plugin={}, type={}, priority={}, title={}",
+                    pluginId, type, priority, title);
+        }
 
         return notificationId;
     }
@@ -110,7 +118,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
             }
             if (toRemove != null) {
                 entry.getValue().remove(toRemove);
-                log.debug("Notification dismissed: {}", notificationId);
+                if (log.isDebugEnabled()) {
+                    log.debug("Notification dismissed: {}", notificationId);
+                }
                 break;
             }
         }
@@ -135,7 +145,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
     @Override
     public void registerListener(String pluginId, Consumer<Notification> listener) {
         listeners.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>()).add(listener);
-        log.debug("Listener registered for plugin: {}", pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Listener registered for plugin: {}", pluginId);
+        }
     }
 
     @Override
@@ -143,7 +155,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
         List<Consumer<Notification>> pluginListeners = listeners.get(pluginId);
         if (pluginListeners != null) {
             pluginListeners.remove(listener);
-            log.debug("Listener unregistered for plugin: {}", pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Listener unregistered for plugin: {}", pluginId);
+            }
         }
     }
 
@@ -153,7 +167,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
         if (active != null) {
             active.clear();
         }
-        log.debug("Notifications cleared for plugin: {}", pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Notifications cleared for plugin: {}", pluginId);
+        }
     }
 
     @Override
@@ -167,6 +183,7 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
 
     private void updateStatistics(String pluginId, NotificationType type) {
         Map<String, Object> stats = statistics.computeIfAbsent(pluginId, k -> new ConcurrentHashMap<>());
+        @SuppressWarnings("unchecked")
         Map<String, AtomicLong> counts = (Map<String, AtomicLong>) stats.computeIfAbsent("counts",
                 k -> new ConcurrentHashMap<>());
 
@@ -185,7 +202,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
                 try {
                     listener.accept(notification);
                 } catch (Exception e) {
-                    log.error("Error in notification listener for plugin {}", pluginId, e);
+                    if (log.isErrorEnabled()) {
+                        log.error("Error in notification listener for plugin {}", pluginId, e);
+                    }
                 }
             }
         }
@@ -197,7 +216,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
                 try {
                     listener.accept(notification);
                 } catch (Exception e) {
-                    log.error("Error in global notification listener", e);
+                    if (log.isErrorEnabled()) {
+                        log.error("Error in global notification listener", e);
+                    }
                 }
             }
         }
@@ -263,7 +284,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
                     try {
                         action.getCallback().run();
                     } catch (Exception ex) {
-                        log.error("Error executing notification action: {}", action.getActionId(), ex);
+                        if (log.isErrorEnabled()) {
+                            log.error("Error executing notification action: {}", action.getActionId(), ex);
+                        }
                     } finally {
                         dialog.dispose();
                         dismiss(notification.getId());
@@ -327,7 +350,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
             history.removeIf(notification -> notification.getTimestamp() < oneDayAgo);
         }
 
-        log.debug("Cleaned up old notifications");
+        if (log.isDebugEnabled()) {
+            log.debug("Cleaned up old notifications");
+        }
     }
 
     private String getIconType(NotificationType type) {

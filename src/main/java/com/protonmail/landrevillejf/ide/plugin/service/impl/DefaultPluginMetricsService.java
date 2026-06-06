@@ -28,21 +28,27 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
     public void incrementCounter(String pluginId, String metricName, long amount) {
         CounterMetric counter = getOrCreateCounter(pluginId, metricName);
         counter.increment(amount);
-        log.debug("Incremented counter {} for plugin {} by {}", metricName, pluginId, amount);
+        if (log.isDebugEnabled()) {
+            log.debug("Incremented counter {} for plugin {} by {}", metricName, pluginId, amount);
+        }
     }
 
     @Override
     public void decrementCounter(String pluginId, String metricName) {
         CounterMetric counter = getOrCreateCounter(pluginId, metricName);
         counter.decrement();
-        log.debug("Decremented counter {} for plugin {}", metricName, pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Decremented counter {} for plugin {}", metricName, pluginId);
+        }
     }
 
     @Override
     public void recordTimer(String pluginId, String metricName, long durationMillis) {
         TimerMetric timer = getOrCreateTimer(pluginId, metricName);
         timer.record(durationMillis);
-        log.debug("Recorded timer {} for plugin {}: {}ms", metricName, pluginId, durationMillis);
+        if (log.isDebugEnabled()) {
+            log.debug("Recorded timer {} for plugin {}: {}ms", metricName, pluginId, durationMillis);
+        }
     }
 
     @Override
@@ -54,14 +60,18 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
     public void recordHistogram(String pluginId, String metricName, long value) {
         HistogramMetric histogram = getOrCreateHistogram(pluginId, metricName);
         histogram.record(value);
-        log.debug("Recorded histogram {} for plugin {}: {}", metricName, pluginId, value);
+        if (log.isDebugEnabled()) {
+            log.debug("Recorded histogram {} for plugin {}: {}", metricName, pluginId, value);
+        }
     }
 
     @Override
     public void setGauge(String pluginId, String metricName, long value) {
         GaugeMetric gauge = getOrCreateGauge(pluginId, metricName);
         gauge.set(value);
-        log.debug("Set gauge {} for plugin {}: {}", metricName, pluginId, value);
+        if (log.isDebugEnabled()) {
+            log.debug("Set gauge {} for plugin {}: {}", metricName, pluginId, value);
+        }
     }
 
     @Override
@@ -144,6 +154,9 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
                             .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getValue()));
                 }
                 break;
+            default:
+                // Default case for exhaustive switch
+                break;
         }
         return Collections.emptyMap();
     }
@@ -154,7 +167,9 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         timers.remove(pluginId);
         histograms.remove(pluginId);
         gauges.remove(pluginId);
-        log.info("Reset all metrics for plugin {}", pluginId);
+        if (log.isInfoEnabled()) {
+            log.info("Reset all metrics for plugin {}", pluginId);
+        }
     }
 
     @Override
@@ -171,7 +186,9 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         if (gauges.containsKey(pluginId)) {
             gauges.get(pluginId).remove(metricName);
         }
-        log.debug("Reset metric {} for plugin {}", metricName, pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Reset metric {} for plugin {}", metricName, pluginId);
+        }
     }
 
     @Override
@@ -246,16 +263,17 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
     }
 
     // Inner class for TimerContext implementation
-    private class DefaultTimerContext implements TimerContext {
+    private final class DefaultTimerContext implements TimerContext {
         private final String pluginId;
         private final String metricName;
         private final long startTime;
-        private boolean stopped = false;
+        private boolean stopped;
 
-        public DefaultTimerContext(String pluginId, String metricName, long startTime) {
+        private DefaultTimerContext(String pluginId, String metricName, long startTime) {
             this.pluginId = pluginId;
             this.metricName = metricName;
             this.startTime = startTime;
+            this.stopped = false;
         }
 
         @Override
@@ -280,8 +298,8 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         }
     }
 
-    // Metric implementations
-    private static class CounterMetric {
+    // Metric implementations - all made final
+    private static final class CounterMetric {
         private final LongAdder value = new LongAdder();
 
         void increment(long amount) {
@@ -297,17 +315,21 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         }
     }
 
-    private static class TimerMetric {
+    private static final class TimerMetric {
         private final LongAdder count = new LongAdder();
         private final LongAdder total = new LongAdder();
-        private volatile long min = Long.MAX_VALUE;
-        private volatile long max = 0;
+        private long min = Long.MAX_VALUE;
+        private long max = 0L;
 
         synchronized void record(long duration) {
             count.increment();
             total.add(duration);
-            min = Math.min(min, duration);
-            max = Math.max(max, duration);
+            if (duration < min) {
+                min = duration;
+            }
+            if (duration > max) {
+                max = duration;
+            }
         }
 
         Map<String, Object> getStatistics() {
@@ -317,24 +339,24 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
                 stats.put("count", cnt);
                 stats.put("total_ms", total.sum());
                 stats.put("avg_ms", (double) total.sum() / cnt);
-                stats.put("min_ms", min == Long.MAX_VALUE ? 0 : min);
+                stats.put("min_ms", min == Long.MAX_VALUE ? 0L : min);
                 stats.put("max_ms", max);
             } else {
-                stats.put("count", 0);
-                stats.put("total_ms", 0);
-                stats.put("avg_ms", 0);
-                stats.put("min_ms", 0);
-                stats.put("max_ms", 0);
+                stats.put("count", 0L);
+                stats.put("total_ms", 0L);
+                stats.put("avg_ms", 0.0);
+                stats.put("min_ms", 0L);
+                stats.put("max_ms", 0L);
             }
             return stats;
         }
     }
 
-    private static class HistogramMetric {
+    private static final class HistogramMetric {
         private final LongAdder count = new LongAdder();
         private final LongAdder total = new LongAdder();
-        private volatile long min = Long.MAX_VALUE;
-        private volatile long max = 0;
+        private long min = Long.MAX_VALUE;
+        private long max = 0L;
         private final Map<Integer, LongAdder> buckets = new ConcurrentHashMap<>();
 
         private static final int[] BUCKETS = {1, 5, 10, 25, 50, 100, 250, 500, 1000, 5000, 10000};
@@ -342,8 +364,12 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         synchronized void record(long value) {
             count.increment();
             total.add(value);
-            min = Math.min(min, value);
-            max = Math.max(max, value);
+            if (value < min) {
+                min = value;
+            }
+            if (value > max) {
+                max = value;
+            }
 
             // Record in appropriate bucket
             for (int bucket : BUCKETS) {
@@ -361,12 +387,11 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
                 stats.put("count", cnt);
                 stats.put("sum", total.sum());
                 stats.put("avg", (double) total.sum() / cnt);
-                stats.put("min", min == Long.MAX_VALUE ? 0 : min);
+                stats.put("min", min == Long.MAX_VALUE ? 0L : min);
                 stats.put("max", max);
 
-                // Add percentiles
+                // Add percentiles (simplified)
                 Map<String, Long> percentiles = new LinkedHashMap<>();
-                long[] sortedValues = new long[(int) cnt]; // This is simplified, real implementation would store values
                 percentiles.put("p50", 0L);
                 percentiles.put("p90", 0L);
                 percentiles.put("p95", 0L);
@@ -384,8 +409,8 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         }
     }
 
-    private static class GaugeMetric {
-        private volatile long value = 0;
+    private static final class GaugeMetric {
+        private long value = 0L;
 
         void set(long value) {
             this.value = value;
