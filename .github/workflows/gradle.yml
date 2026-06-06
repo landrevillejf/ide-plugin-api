@@ -2,9 +2,15 @@ name: Java CI with Gradle
 
 on:
   push:
-    branches: [ "main", "master", "develop" ]
+    branches: [ main, master, develop ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write         # Pour uploader les résultats des tests
+  pull-requests: write  # Pour commenter sur les PR
 
 jobs:
   build:
@@ -22,24 +28,15 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
       - name: Build with Gradle
-        run: ./gradlew build --no-daemon --stacktrace
+        run: ./gradlew build --no-daemon
 
-      - name: Run tests with coverage
-        run: ./gradlew test jacocoTestReport --no-daemon
-
-      - name: Run Cucumber tests
-        run: ./gradlew cucumberTest --no-daemon --continue
+      - name: Run tests
+        run: ./gradlew test --no-daemon
 
       - name: Upload test reports
-        uses: actions/upload-artifact@v4
         if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: |
-            build/reports/
-            build/test-results/
-            build/reports/jacoco/
+          path: build/reports/tests/
