@@ -19,10 +19,10 @@ public class DefaultPluginAsyncTaskExecutor implements PluginAsyncTaskExecutor {
     private final Map<String, PluginExecutor> pluginExecutors = new ConcurrentHashMap<>();
     private final Map<String, PluginTask> tasks = new ConcurrentHashMap<>();
     private final AtomicLong taskIdGenerator = new AtomicLong(0);
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
     public DefaultPluginAsyncTaskExecutor() {
         // Start periodic cleanup of old tasks
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(this::cleanupOldTasks, 1, 1, TimeUnit.HOURS);
         log.info("DefaultPluginAsyncTaskExecutor initialized");
     }

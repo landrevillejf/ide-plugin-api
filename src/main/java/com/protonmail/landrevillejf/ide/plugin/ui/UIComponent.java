@@ -1,5 +1,7 @@
 package com.protonmail.landrevillejf.ide.plugin.ui;
 
+import lombok.Getter;
+
 import javax.swing.*;
 import java.io.Serializable;
 
@@ -14,16 +16,65 @@ import java.io.Serializable;
  * @author landrevillejf
  * @version 1.1.0
  */
+@Getter
 public class UIComponent implements Serializable {
     private static final long serialVersionUID = 2L;
 
+    /**
+     * -- GETTER --
+     *  Gets the unique identifier for this component.
+     *
+     * @return the component ID
+     */
     private final String componentId;
+    /**
+     * -- GETTER --
+     *  Gets the type of this component.
+     *
+     * @return the component type
+     */
     private final ComponentType type;
+    /**
+     * -- GETTER --
+     *  Gets the display title for this component.
+     *
+     * @return the title
+     */
     private final String title;
+    /**
+     * -- GETTER --
+     *  Gets the actual Swing component.
+     *
+     * @return the component
+     */
     private final JComponent component;
+    /**
+     * -- GETTER --
+     *  Gets the path to the icon resource.
+     *
+     * @return the icon path, or null if no icon path
+     */
     private final String iconPath;
+    /**
+     * -- GETTER --
+     *  Gets the icon for this component.
+     *
+     * @return the icon, or null if no icon
+     */
     private transient Icon icon;  // transient pour ne pas sérialiser l'icône
+    /**
+     * -- GETTER --
+     *  Gets the display order for this component.
+     *
+     * @return the order (lower = earlier in display)
+     */
     private final int order;
+    /**
+     * -- GETTER --
+     *  Checks if this component can be removed by the user.
+     *
+     * @return {@code true} if removable, {@code false} otherwise
+     */
     private final boolean removable;
 
     /**
@@ -36,13 +87,13 @@ public class UIComponent implements Serializable {
      * @param iconPath Optional path to an icon resource
      */
     public UIComponent(
-            String componentId,
-            ComponentType type,
-            String title,
-            JComponent component,
-            String iconPath
+            final String componentId,
+            final ComponentType type,
+            final String title,
+            final JComponent component,
+            final String iconPath
     ) {
-        this(componentId, type, title, component, iconPath, (Icon)null, Integer.MAX_VALUE, true);
+        this(componentId, type, title, component, iconPath, null, Integer.MAX_VALUE, true);
     }
 
     /**
@@ -55,11 +106,11 @@ public class UIComponent implements Serializable {
      * @param icon The icon for the component
      */
     public UIComponent(
-            String componentId,
-            ComponentType type,
-            String title,
-            JComponent component,
-            Icon icon
+            final String componentId,
+            final ComponentType type,
+            final String title,
+            final JComponent component,
+            final Icon icon
     ) {
         this(componentId, type, title, component, null, icon, Integer.MAX_VALUE, true);
     }
@@ -76,13 +127,13 @@ public class UIComponent implements Serializable {
      * @param removable Whether the user can remove this component
      */
     public UIComponent(
-            String componentId,
-            ComponentType type,
-            String title,
-            JComponent component,
-            String iconPath,
-            int order,
-            boolean removable
+            final String componentId,
+            final ComponentType type,
+            final String title,
+            final JComponent component,
+            final String iconPath,
+            final int order,
+            final boolean removable
     ) {
         this(componentId, type, title, component, iconPath, null, order, removable);
     }
@@ -99,13 +150,13 @@ public class UIComponent implements Serializable {
      * @param removable Whether the user can remove this component
      */
     public UIComponent(
-            String componentId,
-            ComponentType type,
-            String title,
-            JComponent component,
-            Icon icon,
-            int order,
-            boolean removable
+            final String componentId,
+            final ComponentType type,
+            final String title,
+            final JComponent component,
+            final Icon icon,
+            final int order,
+            final boolean removable
     ) {
         this(componentId, type, title, component, null, icon, order, removable);
     }
@@ -123,24 +174,16 @@ public class UIComponent implements Serializable {
      * @param removable Whether the user can remove this component
      */
     private UIComponent(
-            String componentId,
-            ComponentType type,
-            String title,
-            JComponent component,
-            String iconPath,
-            Icon icon,
-            int order,
-            boolean removable
+            final String componentId,
+            final ComponentType type,
+            final String title,
+            final JComponent component,
+            final String iconPath,
+            final Icon icon,
+            final int order,
+            final boolean removable
     ) {
-        if (componentId == null || componentId.trim().isEmpty()) {
-            throw new IllegalArgumentException("componentId cannot be null or empty");
-        }
-        if (type == null) {
-            throw new IllegalArgumentException("type cannot be null");
-        }
-        if (component == null) {
-            throw new IllegalArgumentException("component cannot be null");
-        }
+        validateParameters(componentId, type, component);
 
         this.componentId = componentId;
         this.type = type;
@@ -153,57 +196,22 @@ public class UIComponent implements Serializable {
     }
 
     /**
-     * Gets the unique identifier for this component.
+     * Validates constructor parameters.
      *
-     * @return the component ID
+     * @param componentId the component ID
+     * @param type the component type
+     * @param component the Swing component
      */
-    public String getComponentId() {
-        return componentId;
-    }
-
-    /**
-     * Gets the type of this component.
-     *
-     * @return the component type
-     */
-    public ComponentType getType() {
-        return type;
-    }
-
-    /**
-     * Gets the display title for this component.
-     *
-     * @return the title
-     */
-    public String getTitle() {
-        return title;
-    }
-
-    /**
-     * Gets the actual Swing component.
-     *
-     * @return the component
-     */
-    public JComponent getComponent() {
-        return component;
-    }
-
-    /**
-     * Gets the path to the icon resource.
-     *
-     * @return the icon path, or null if no icon path
-     */
-    public String getIconPath() {
-        return iconPath;
-    }
-
-    /**
-     * Gets the icon for this component.
-     *
-     * @return the icon, or null if no icon
-     */
-    public Icon getIcon() {
-        return icon;
+    private void validateParameters(final String componentId, final ComponentType type, final JComponent component) {
+        if (componentId == null || componentId.isBlank()) {
+            throw new IllegalArgumentException("componentId cannot be null or empty");
+        }
+        if (type == null) {
+            throw new IllegalArgumentException("type cannot be null");
+        }
+        if (component == null) {
+            throw new IllegalArgumentException("component cannot be null");
+        }
     }
 
     /**
@@ -211,26 +219,8 @@ public class UIComponent implements Serializable {
      *
      * @param icon the icon to set
      */
-    public void setIcon(Icon icon) {
+    public void setIcon(final Icon icon) {
         this.icon = icon;
-    }
-
-    /**
-     * Gets the display order for this component.
-     *
-     * @return the order (lower = earlier in display)
-     */
-    public int getOrder() {
-        return order;
-    }
-
-    /**
-     * Checks if this component can be removed by the user.
-     *
-     * @return {@code true} if removable, {@code false} otherwise
-     */
-    public boolean isRemovable() {
-        return removable;
     }
 
     /**
@@ -256,61 +246,39 @@ public class UIComponent implements Serializable {
     /**
      * Enumeration of component types that plugins can add to the IDE.
      */
+    @Getter
     public enum ComponentType {
-        /**
-         * A tab in the main IDE editor area (where code files are edited)
-         */
+        /** A tab in the main IDE editor area (where code files are edited) */
         IDE_TAB("IDE Tab", "A tab in the main editor area"),
 
-        /**
-         * A panel in the bottom panel area (e.g., console, build output)
-         */
+        /** A panel in the bottom panel area (e.g., console, build output) */
         BOTTOM_PANEL("Bottom Panel", "A panel in the bottom area"),
 
-        /**
-         * A left sidebar panel (e.g., project structure, outline)
-         */
+        /** A left sidebar panel (e.g., project structure, outline) */
         LEFT_SIDEBAR("Left Sidebar", "A panel in the left sidebar"),
 
-        /**
-         * A right sidebar panel
-         */
+        /** A right sidebar panel */
         RIGHT_SIDEBAR("Right Sidebar", "A panel in the right sidebar"),
 
-        /**
-         * A button in the main toolbar
-         */
+        /** A button in the main toolbar */
         TOOLBAR_BUTTON("Toolbar Button", "A button in the main toolbar"),
 
-        /**
-         * A menu item (will be added to a plugins menu or appropriate location)
-         */
+        /** A menu item (will be added to a plugins menu or appropriate location) */
         MENU_ITEM("Menu Item", "A menu item"),
 
-        /**
-         * A custom dockable panel (e.g., like IntelliJ's tool windows)
-         */
+        /** A custom dockable panel (e.g., like IntelliJ's tool windows) */
         DOCKABLE_PANEL("Dockable Panel", "A dockable tool window"),
 
-        /**
-         * A status bar component
-         */
-        STATUS_BAR_COMPONENT("Status Bar", "A component in the status bar");
+        /** A status bar component */
+        STATUS_BAR("Status Bar", "A component in the status bar");
 
         private final String displayName;
         private final String description;
 
-        ComponentType(String displayName, String description) {
+        ComponentType(final String displayName, final String description) {
             this.displayName = displayName;
             this.description = description;
         }
 
-        public String getDisplayName() {
-            return displayName;
-        }
-
-        public String getDescription() {
-            return description;
-        }
     }
 }

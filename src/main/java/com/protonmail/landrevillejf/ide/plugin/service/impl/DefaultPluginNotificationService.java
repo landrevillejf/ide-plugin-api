@@ -21,10 +21,10 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
     private final Map<String, List<Consumer<Notification>>> listeners = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Object>> statistics = new ConcurrentHashMap<>();
     private final AtomicLong notificationCounter = new AtomicLong(0);
-    private final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
 
     public DefaultPluginNotificationService() {
         // Cleanup old notifications every hour
+        ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
         cleanupExecutor.scheduleAtFixedRate(this::cleanupOldNotifications, 1, 1, TimeUnit.HOURS);
         if (log.isInfoEnabled()) {
             log.info("DefaultPluginNotificationService initialized");

@@ -15,10 +15,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class DefaultPluginCacheService implements PluginCacheService {
 
     private final Map<String, PluginCache> pluginCaches = new ConcurrentHashMap<>();
-    private final ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
 
     public DefaultPluginCacheService() {
         // Schedule periodic cleanup of expired entries every minute
+        ScheduledExecutorService cleanupExecutor = Executors.newSingleThreadScheduledExecutor();
         cleanupExecutor.scheduleAtFixedRate(this::cleanupExpiredEntries, 1, 1, TimeUnit.MINUTES);
         log.info("DefaultPluginCacheService initialized");
     }

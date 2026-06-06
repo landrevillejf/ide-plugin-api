@@ -20,7 +20,6 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     private final List<Alert> alertHistory = new CopyOnWriteArrayList<>();
     private final List<HealthMonitorListener> listeners = new CopyOnWriteArrayList<>();
     private final AtomicLong alertIdGenerator = new AtomicLong(0);
-    private final ScheduledExecutorService monitoringExecutor = Executors.newScheduledThreadPool(1);
 
     private final OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
     private final ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
@@ -28,6 +27,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
     public DefaultPluginMonitoringService() {
         // Start periodic monitoring
+        ScheduledExecutorService monitoringExecutor = Executors.newScheduledThreadPool(1);
         monitoringExecutor.scheduleAtFixedRate(this::updateAllHealthReports, 5, 5, TimeUnit.SECONDS);
 
         // Start cleanup of old alerts
