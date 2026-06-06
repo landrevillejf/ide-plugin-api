@@ -17,11 +17,13 @@ repositories {
 }
 
 dependencies {
-    // Tes dépendances existantes
+    // internal
     implementation name: 'ide-core-0.3.2-SNAPSHOT', ext: 'jar'
     implementation name: 'common-1.1.1-SNAPSHOT', ext: 'jar'
     implementation name: 'IconManager-1.6.0', ext: 'jar'
     implementation name: 'project-manager-1.0-SNAPSHOT', ext: 'jar'
+
+    // external
     implementation 'com.fifesoft:rsyntaxtextarea:3.6.0'
     implementation 'com.fasterxml.jackson.core:jackson-core:2.15.2'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.2'
