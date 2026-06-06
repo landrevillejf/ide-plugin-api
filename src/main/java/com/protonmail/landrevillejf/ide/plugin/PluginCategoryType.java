@@ -1,8 +1,11 @@
 package com.protonmail.landrevillejf.ide.plugin;
 
+import com.protonmail.landrevillejf.AdvancedMissingIcon;
+import com.protonmail.landrevillejf.IconColor;
 import com.protonmail.landrevillejf.IconManager;
 
 import javax.swing.*;
+import java.awt.*;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -52,6 +55,12 @@ public enum PluginCategoryType {
     private final int iconWidth = 16;
     private final int iconHeight = 16;
 
+    // Cache pour les icônes transformées
+    private Icon cachedIcon;
+    private Icon cachedTintedIcon;
+    private Icon cachedShadowIcon;
+    private Icon cachedRoundedIcon;
+
     PluginCategoryType(String displayName, IconManager.IconCategory iconCategory, String iconName, String... keywords) {
         this.displayName = displayName;
         this.iconCategory = iconCategory;
@@ -59,8 +68,83 @@ public enum PluginCategoryType {
         this.keywords = new HashSet<>(Arrays.asList(keywords));
     }
 
+    /**
+     * Récupère l'icône de base de la catégorie
+     */
     public Icon getIcon() {
-        return IconManager.loadIcon(iconCategory, iconName, iconWidth, iconHeight);
+        if (cachedIcon == null) {
+            cachedIcon = IconManager.loadIcon(iconCategory, iconName, iconWidth, iconHeight);
+        }
+        return cachedIcon;
+    }
+
+    /**
+     * Récupère l'icône avec une teinte spécifique
+     */
+    public Icon getTintedIcon(Color color) {
+        String cacheKey = iconName + "_tint_" + color.getRGB();
+        if (cachedTintedIcon == null) {
+            cachedTintedIcon = IconManager.loadIcon(iconCategory, iconName, iconWidth, iconHeight, color);
+        }
+        return cachedTintedIcon;
+    }
+
+    /**
+     * Récupère l'icône avec une ombre
+     */
+    public Icon getIconWithShadow() {
+        if (cachedShadowIcon == null) {
+            cachedShadowIcon = IconManager.loadIconWithShadow(iconCategory, iconName, iconWidth, iconHeight, 3);
+        }
+        return cachedShadowIcon;
+    }
+
+    /**
+     * Récupère l'icône avec des coins arrondis
+     */
+    public Icon getRoundedIcon(int cornerRadius) {
+        if (cachedRoundedIcon == null) {
+            cachedRoundedIcon = IconManager.loadIconWithRoundedCorners(iconCategory, iconName, iconWidth, iconHeight, cornerRadius);
+        }
+        return cachedRoundedIcon;
+    }
+
+    /**
+     * Récupère l'icône pivotée
+     */
+    public Icon getRotatedIcon(double degrees) {
+        return IconManager.loadIcon(iconCategory, iconName, iconWidth, iconHeight, degrees);
+    }
+
+    /**
+     * Récupère l'icône avec effet de verre
+     */
+    public Icon getGlassIcon() {
+        return IconManager.createGlassIcon(getDominantColor(), null, iconWidth, 5);
+    }
+
+    /**
+     * Récupère l'icône avec un badge (nombre de notifications)
+     */
+    public Icon getIconWithBadge(int count, Color badgeColor) {
+        Icon baseIcon = getIcon();
+        return IconManager.createBadgeIcon(baseIcon, count, badgeColor);
+    }
+
+    /**
+     * Récupère la couleur dominante de l'icône
+     */
+    public Color getDominantColor() {
+        Icon icon = getIcon();
+        Color[] colors = IconManager.extractDominantColors(icon, 1);
+        return colors.length > 0 ? colors[0] : IconColor.BLUE.getColor();
+    }
+
+    /**
+     * Vérifie si l'icône existe
+     */
+    public boolean iconExists() {
+        return !(getIcon() instanceof AdvancedMissingIcon);
     }
 
     public String getDisplayName() {
