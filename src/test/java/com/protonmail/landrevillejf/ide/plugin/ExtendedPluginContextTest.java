@@ -130,6 +130,21 @@ class ExtendedPluginContextTest {
         }
 
         @Override
+        public String getPluginId() {
+            return "";
+        }
+
+        @Override
+        public Plugin getPlugin() {
+            return null;
+        }
+
+        @Override
+        public File getPluginDataDirectory() {
+            return null;
+        }
+
+        @Override
         public void logInfo(String message) {
             // Implementation vide mais non-nulle
         }

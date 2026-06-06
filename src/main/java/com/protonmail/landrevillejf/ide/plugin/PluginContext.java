@@ -2,6 +2,8 @@ package com.protonmail.landrevillejf.ide.plugin;
 
 import com.protonmail.landrevillejf.ide.plugin.ui.ComponentRegistry;
 
+import java.io.File;
+
 public interface PluginContext {
     PluginEventBus getEventBus();
     <T> T getService(Class<T> serviceClass);
@@ -22,4 +24,10 @@ public interface PluginContext {
      * @return the component registry
      */
     ComponentRegistry getComponentRegistry();
+
+    String getPluginId();
+
+    Plugin getPlugin();
+
+    File getPluginDataDirectory();
 }

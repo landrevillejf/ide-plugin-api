@@ -10,13 +10,14 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import java.io.File;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 public class DefaultPluginContext implements PluginContext {
     private final ServiceRegistry serviceRegistry;
-    private final ConcurrentHashMap<Class<?>, Object> localServices = new ConcurrentHashMap<>();
+    private final Map<Class<?>, Object> localServices = new ConcurrentHashMap<>();
     private final PluginEventBus pluginEventBus;
     private final EventBus applicationEventBus;
     @Setter
@@ -49,7 +50,10 @@ public class DefaultPluginContext implements PluginContext {
         this.plugin = null;
 
         if (pluginDataDirectory != null && !pluginDataDirectory.exists()) {
-            pluginDataDirectory.mkdirs();
+            boolean created = pluginDataDirectory.mkdirs();
+            if (!created && log.isWarnEnabled()) {
+                log.warn("Failed to create plugin data directory: {}", pluginDataDirectory);
+            }
         }
     }
 
@@ -62,10 +66,13 @@ public class DefaultPluginContext implements PluginContext {
                                 Plugin plugin) {
         this(serviceRegistry, pluginEventBus, applicationEventBus, pluginManager,
                 pluginDataDirectory, pluginId);
-        this.plugin = plugin;  // Si vous avez un champ plugin dans la classe
+        this.plugin = plugin;
 
         if (pluginDataDirectory != null && !pluginDataDirectory.exists()) {
-            pluginDataDirectory.mkdirs();
+            boolean created = pluginDataDirectory.mkdirs();
+            if (!created && log.isWarnEnabled()) {
+                log.warn("Failed to create plugin data directory: {}", pluginDataDirectory);
+            }
         }
     }
 
@@ -76,6 +83,7 @@ public class DefaultPluginContext implements PluginContext {
 
     @Override
     public <T> T getService(Class<T> serviceClass) {
+        @SuppressWarnings("unchecked")
         T localService = (T) localServices.get(serviceClass);
         if (localService != null) {
             return localService;
@@ -90,8 +98,10 @@ public class DefaultPluginContext implements PluginContext {
 
         serviceRegistry.register(serviceClass, instance);
         localServices.put(serviceClass, instance);
-        log.debug("Service registered: {} by plugin: {}",
-                serviceClass.getSimpleName(), plugin != null ? plugin.getName() : pluginId);
+        if (log.isDebugEnabled()) {
+            String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+            log.debug("Service registered: {} by plugin: {}", serviceClass.getSimpleName(), pluginName);
+        }
     }
 
     @Override
@@ -100,23 +110,29 @@ public class DefaultPluginContext implements PluginContext {
             return;
         }
 
-        localServices.remove(service);;
-        log.debug("Service unregistered: {} for plugin: {}",
-                service.getSimpleName(), plugin != null ? plugin.getName() : pluginId);
+        localServices.remove(service);
+        if (log.isDebugEnabled()) {
+            String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+            log.debug("Service unregistered: {} for plugin: {}", service.getSimpleName(), pluginName);
+        }
     }
 
     @Override
     public void registerService(Object service) {
         if (service == null) {
-            log.warn("Attempted to register null service for plugin: {}",
-                    plugin != null ? plugin.getName() : pluginId);
+            if (log.isWarnEnabled()) {
+                String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+                log.warn("Attempted to register null service for plugin: {}", pluginName);
+            }
             return;
         }
 
         Class<?> serviceClass = service.getClass();
         localServices.put(serviceClass, service);
-        log.debug("Service registered: {} for plugin: {}",
-                serviceClass.getSimpleName(), plugin != null ? plugin.getName() : pluginId);
+        if (log.isDebugEnabled()) {
+            String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+            log.debug("Service registered: {} for plugin: {}", serviceClass.getSimpleName(), pluginName);
+        }
     }
 
     @Override
@@ -126,22 +142,31 @@ public class DefaultPluginContext implements PluginContext {
 
     @Override
     public String getPluginDataPath() {
-        return pluginDataDirectory != null ? pluginDataDirectory.getAbsolutePath() : "";
+        return (pluginDataDirectory != null) ? pluginDataDirectory.getAbsolutePath() : "";
     }
 
     @Override
     public void logInfo(String message) {
-        log.debug("[Plugin {}] {}", plugin != null ? plugin.getName() : pluginId, message);
+        if (log.isDebugEnabled()) {
+            String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+            log.debug("[Plugin {}] {}", pluginName, message);
+        }
     }
 
     @Override
     public void logWarning(String message) {
-        log.warn("[Plugin {}] {}", plugin != null ? plugin.getName() : pluginId, message);
+        if (log.isWarnEnabled()) {
+            String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+            log.warn("[Plugin {}] {}", pluginName, message);
+        }
     }
 
     @Override
     public void logError(String message, Throwable throwable) {
-        log.error("[Plugin {}] {}", plugin != null ? plugin.getName() : pluginId, message, throwable);
+        if (log.isErrorEnabled()) {
+            String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+            log.error("[Plugin {}] {}", pluginName, message, throwable);
+        }
     }
 
     @Override
@@ -158,11 +183,29 @@ public class DefaultPluginContext implements PluginContext {
 
     @Override
     public void logDebug(String message) {
-        log.debug("[Plugin {}] {}", plugin != null ? plugin.getName() : pluginId, message);
+        if (log.isDebugEnabled()) {
+            String pluginName = (plugin != null) ? plugin.getName() : pluginId;
+            log.debug("[Plugin {}] {}", pluginName, message);
+        }
     }
 
     @Override
     public ComponentRegistry getComponentRegistry() {
         return componentRegistry;
+    }
+
+    @Override
+    public String getPluginId() {
+        return pluginId;
+    }
+
+    @Override
+    public Plugin getPlugin() {
+        return plugin;
+    }
+
+    @Override
+    public File getPluginDataDirectory() {
+        return pluginDataDirectory;
     }
 }
