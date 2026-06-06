@@ -1,6 +1,7 @@
 package com.protonmail.landrevillejf.ide.plugin.events;
 
 import com.protonmail.landrevillejf.ide.plugin.ui.UIComponent;
+import lombok.Getter;
 
 /**
  * Event published when a plugin requests to add a UI component to the IDE.
@@ -13,9 +14,28 @@ import com.protonmail.landrevillejf.ide.plugin.ui.UIComponent;
  * @author landrevillejf
  * @version 1.0.0
  */
+@Getter
 public class UIComponentAddedEvent extends BaseEvent {
+    /**
+     * -- GETTER --
+     *  Gets the component being added.
+     *
+     * @return the component
+     */
     private final UIComponent component;
+    /**
+     * -- GETTER --
+     *  Gets the ID of the plugin adding this component.
+     *
+     * @return the plugin ID
+     */
     private final String pluginId;
+    /**
+     * -- GETTER --
+     *  Checks if this event was handled by the IDE.
+     *
+     * @return {@code true} if handled, {@code false} otherwise
+     */
     private boolean handled = false;
 
     /**
@@ -32,24 +52,6 @@ public class UIComponentAddedEvent extends BaseEvent {
     }
 
     /**
-     * Gets the component being added.
-     *
-     * @return the component
-     */
-    public UIComponent getComponent() {
-        return component;
-    }
-
-    /**
-     * Gets the ID of the plugin adding this component.
-     *
-     * @return the plugin ID
-     */
-    public String getPluginId() {
-        return pluginId;
-    }
-
-    /**
      * Marks this event as handled by the IDE.
      *
      * @param handled {@code true} if the IDE successfully handled the request
@@ -58,13 +60,5 @@ public class UIComponentAddedEvent extends BaseEvent {
         this.handled = handled;
     }
 
-    /**
-     * Checks if this event was handled by the IDE.
-     *
-     * @return {@code true} if handled, {@code false} otherwise
-     */
-    public boolean isHandled() {
-        return handled;
-    }
 }
 

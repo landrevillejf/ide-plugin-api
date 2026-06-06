@@ -368,7 +368,7 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
     /**
      * Implementation of Permission interface
      */
-    private static class PermissionImpl implements Permission {
+    public static class PermissionImpl implements Permission {
         private final String id;
         private final String description;
         private final String category;

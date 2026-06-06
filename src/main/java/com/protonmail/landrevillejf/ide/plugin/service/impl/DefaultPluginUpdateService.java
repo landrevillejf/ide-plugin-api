@@ -29,7 +29,7 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     private final AtomicInteger successCount = new AtomicInteger(0);
     private final AtomicInteger failedCount = new AtomicInteger(0);
 
-    private String updateServerUrl = "https://api.swingide.com/plugins";
+    private String updateServerUrl = "https://api.ide.com/plugins";
 
     public DefaultPluginUpdateService() {
         log.info("DefaultPluginUpdateService initialized");
@@ -422,7 +422,7 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     /**
      * Implementation of PluginVersion
      */
-    private static class PluginVersionImpl implements PluginVersion {
+    public static class PluginVersionImpl implements PluginVersion {
         private final String version;
         private final String description;
         private final String releaseDate;

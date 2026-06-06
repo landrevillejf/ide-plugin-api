@@ -422,6 +422,9 @@ public class DefaultPluginDependencyResolver implements PluginDependencyResolver
         public String getId() { return id; }
 
         @Override
+        public String getPluginId() { return pluginId; }
+
+        @Override
         public String getProviderId() { return providerId; }
 
         @Override

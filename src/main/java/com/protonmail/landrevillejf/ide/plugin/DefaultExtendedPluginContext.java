@@ -131,16 +131,14 @@ public class DefaultExtendedPluginContext extends DefaultPluginContext implement
 
     @SuppressWarnings("unchecked")
     private <T> T cacheService(Class<T> serviceClass, java.util.function.Supplier<T> supplier) {
-        Object cached = serviceCache.get(serviceClass);
-        if (cached != null) {
-            return (T) cached;
-        }
-
-        T service = supplier.get();
-        if (service != null) {
-            serviceCache.putIfAbsent(serviceClass, service);
-        }
-        return service;
+        // Use computeIfAbsent for better thread safety
+        return (T) serviceCache.computeIfAbsent(serviceClass, key -> {
+            T service = supplier.get();
+            if (service == null) {
+                throw new IllegalStateException("Service " + serviceClass.getName() + " is not available");
+            }
+            return service;
+        });
     }
 }
 

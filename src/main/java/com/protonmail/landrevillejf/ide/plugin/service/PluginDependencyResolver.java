@@ -24,7 +24,8 @@ public interface PluginDependencyResolver {
      */
     interface PluginDependency {
         String getId();
-        String getProviderId();
+        String getPluginId();  // Plugin qui a la dépendance
+        String getProviderId(); // Plugin dont on dépend
         String getRequiredVersion();
         String getMinimumVersion();
         String getMaximumVersion();

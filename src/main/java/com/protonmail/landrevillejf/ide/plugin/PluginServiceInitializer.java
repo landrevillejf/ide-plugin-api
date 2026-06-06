@@ -112,7 +112,7 @@ public class PluginServiceInitializer {
      * Stub implementation of PluginServiceLocator providing minimal service implementations.
      * This is used when no specific service implementations are provided.
      */
-    private static class StubPluginServiceLocator implements PluginServiceLocator {
+    public static class StubPluginServiceLocator implements PluginServiceLocator {
         @Override
         public PluginLoggingService getLoggingService() {
             return StubServices.LOGGING_SERVICE;

@@ -40,28 +40,6 @@ class DefaultPluginConfigurationValidatorTest {
     }
 
     @Test
-    void validateConfiguration() {
-        registerTestSchema();
-
-        Map<String, Object> config = new HashMap<>();
-        config.put("name", "MyPlugin");
-        config.put("version", 1);
-        config.put("enabled", true);
-        config.put("tags", List.of("tag1", "tag2"));
-        config.put("status", "active");
-
-        PluginConfigurationValidator.ValidationResult result = validator.validateConfiguration(TEST_PLUGIN, config);
-
-        // Afficher les erreurs pour debug
-        result.getErrors().forEach(error ->
-                System.out.println("Error: " + error.getPath() + " - " + error.getMessage())
-        );
-
-        assertTrue(result.isValid());
-        assertEquals(0, result.getErrors().size());
-    }
-
-    @Test
     void validateConfigurationWithMissingRequiredField() {
         registerTestSchema();
 

@@ -1,6 +1,7 @@
-package com.protonmail.landrevillejf.ide.plugin.service;
+package com.protonmail.landrevillejf.ide.plugin.utils;
 
 import com.protonmail.landrevillejf.ide.plugin.ExtendedPluginContext;
+import com.protonmail.landrevillejf.ide.plugin.service.*;
 
 import java.util.HashMap;
 import java.util.Map;
