@@ -67,9 +67,9 @@ test {
     useJUnitPlatform()
 
     // Exclure les tests Cucumber
-    exclude '**/PluginServicesRunnerTests*'
-    exclude '**/RunCucumberTest*'
-    exclude '**/*Cucumber*'
+//    exclude '**/PluginServicesRunnerTests*'
+//    exclude '**/RunCucumberTest*'
+//    exclude '**/*Cucumber*'
 
     testLogging {
         events "passed", "skipped", "failed"
