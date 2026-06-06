@@ -103,7 +103,7 @@ class UIComponentBuilderTest {
         List<UIComponent> components = builder.getComponents();
 
         assertEquals(1, components.size());
-        assertEquals(UIComponent.ComponentType.STATUS_BAR_COMPONENT, components.get(0).getType());
+        assertEquals(UIComponent.ComponentType.STATUS_BAR, components.getFirst().getType());
     }
 
     @Test

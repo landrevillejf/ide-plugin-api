@@ -1,6 +1,9 @@
 package com.protonmail.landrevillejf.ide.plugin;
 
+import lombok.Getter;
+
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -132,8 +135,12 @@ public interface Plugin {
      * Override this method to prepare any resources or configurations required
      * before initialization.
      * </p>
+     *
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific pre-initialization logic.</p>
      */
     default void preInitialize() {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -173,8 +180,12 @@ public interface Plugin {
      * <p>
      * This method is invoked after {@link #enable()} has completed successfully.
      * </p>
+     *
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific post-enable logic.</p>
      */
     default void afterEnable() {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -203,8 +214,12 @@ public interface Plugin {
      * <p>
      * This method is invoked after {@link #disable()} has completed.
      * </p>
+     *
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific post-disable logic.</p>
      */
     default void afterDisable() {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -221,8 +236,12 @@ public interface Plugin {
      * <p>
      * Override this method to add any startup logic.
      * </p>
+     *
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific startup logic.</p>
      */
     default void onStart() {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -230,8 +249,12 @@ public interface Plugin {
      * <p>
      * Override this method to add any shutdown logic.
      * </p>
+     *
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific shutdown logic.</p>
      */
     default void onStop() {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -239,8 +262,12 @@ public interface Plugin {
      * <p>
      * Override this method to release any resources or save state.
      * </p>
+     *
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific cleanup logic.</p>
      */
     default void cleanup() {
+        // Empty default implementation - override if needed
     }
 
     // ========================================================================
@@ -490,10 +517,13 @@ public interface Plugin {
      * @param eventData The data associated with the event.
      */
     default void handleEvent(PluginEventType eventType, Object eventData) {
+        // Empty default implementation - override if needed
     }
 
     /**
      * Handles string-based events sent to the plugin.
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific event handling logic.</p>
      *
      * @param eventType The type of event as string.
      * @param eventData The data associated with the event.
@@ -501,7 +531,7 @@ public interface Plugin {
     default void handleEvent(String eventType, Object eventData) {
         // Convert string to enum if possible, otherwise use CUSTOM_EVENT
         try {
-            PluginEventType type = PluginEventType.valueOf(eventType.toUpperCase());
+            PluginEventType type = PluginEventType.valueOf(eventType.toUpperCase(Locale.ROOT));
             handleEvent(type, eventData);
         } catch (IllegalArgumentException e) {
             handleEvent(PluginEventType.CUSTOM_EVENT,
@@ -511,11 +541,14 @@ public interface Plugin {
 
     /**
      * Publishes an event to the plugin system.
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific event publishing logic.</p>
      *
      * @param eventType The type of event to publish.
      * @param eventData The data associated with the event.
      */
     default void publishEvent(String eventType, Object eventData) {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -552,10 +585,13 @@ public interface Plugin {
 
     /**
      * Called when the plugin encounters an error.
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific error handling logic.</p>
      *
      * @param throwable The error encountered by the plugin.
      */
     default void onError(Throwable throwable) {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -593,8 +629,11 @@ public interface Plugin {
 
     /**
      * Resets performance metrics.
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific metric reset logic.</p>
      */
     default void resetMetrics() {
+        // Empty default implementation - override if needed
     }
 
     /**
@@ -676,11 +715,14 @@ public interface Plugin {
 
     /**
      * Called when the plugin is upgraded.
+     * <p>This method has an empty default body. Implementing plugins may override
+     * this method to provide specific upgrade logic.</p>
      *
      * @param oldVersion The previous version of the plugin.
      * @param newVersion The new version of the plugin.
      */
     default void onUpgrade(String oldVersion, String newVersion) {
+        // Empty default implementation - override if needed
     }
 
     // ========================================================================
@@ -706,8 +748,21 @@ public interface Plugin {
     /**
      * Represents the result of a compatibility check.
      */
+    @Getter
     class CompatibilityResult {
+        /**
+         * -- GETTER --
+         *  Returns whether the plugin is compatible.
+         *
+         * @return {@code true} if compatible, {@code false} otherwise.
+         */
         private final boolean compatible;
+        /**
+         * -- GETTER --
+         *  Returns the compatibility message.
+         *
+         * @return The message describing compatibility status.
+         */
         private final String message;
 
         /**
@@ -721,28 +776,12 @@ public interface Plugin {
             this.message = message;
         }
 
-        /**
-         * Returns whether the plugin is compatible.
-         *
-         * @return {@code true} if compatible, {@code false} otherwise.
-         */
-        public boolean isCompatible() {
-            return compatible;
-        }
-
-        /**
-         * Returns the compatibility message.
-         *
-         * @return The message describing compatibility status.
-         */
-        public String getMessage() {
-            return message;
-        }
     }
 
     /**
      * Represents the health status of a plugin.
      */
+    @Getter
     class HealthStatus {
         /** Plugin is healthy and functioning normally */
         public static final String UP = "UP";
@@ -751,8 +790,26 @@ public interface Plugin {
         /** Plugin is functioning with limitations */
         public static final String DEGRADED = "DEGRADED";
 
+        /**
+         * -- GETTER --
+         *  Returns the health status.
+         *
+         * @return The status (UP, DOWN, or DEGRADED).
+         */
         private final String status;
+        /**
+         * -- GETTER --
+         *  Returns the health message.
+         *
+         * @return The message describing the health status.
+         */
         private final String message;
+        /**
+         * -- GETTER --
+         *  Returns additional health details.
+         *
+         * @return A map of health details.
+         */
         private final Map<String, Object> details;
 
         /**
@@ -778,31 +835,5 @@ public interface Plugin {
             this.details = details;
         }
 
-        /**
-         * Returns the health status.
-         *
-         * @return The status (UP, DOWN, or DEGRADED).
-         */
-        public String getStatus() {
-            return status;
-        }
-
-        /**
-         * Returns the health message.
-         *
-         * @return The message describing the health status.
-         */
-        public String getMessage() {
-            return message;
-        }
-
-        /**
-         * Returns additional health details.
-         *
-         * @return A map of health details.
-         */
-        public Map<String, Object> getDetails() {
-            return details;
-        }
     }
 }
