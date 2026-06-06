@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class DefaultPluginHookService implements PluginHookService {
+public final class DefaultPluginHookService implements PluginHookService {
 
     private final Map<String, RegisteredHook> hooks = new ConcurrentHashMap<>();
     private final Map<String, List<RegisteredHook>> hooksByPlugin = new ConcurrentHashMap<>();
@@ -18,7 +18,9 @@ public class DefaultPluginHookService implements PluginHookService {
     private final AtomicLong hookIdGenerator = new AtomicLong(0);
 
     public DefaultPluginHookService() {
-        log.info("DefaultPluginHookService initialized");
+        if (log.isInfoEnabled()) {
+            log.info("DefaultPluginHookService initialized");
+        }
     }
 
     @Override
@@ -36,10 +38,14 @@ public class DefaultPluginHookService implements PluginHookService {
 
         // Sort hooks by priority when adding
         List<RegisteredHook> pluginHooks = hooksByPlugin.get(pluginId);
-        pluginHooks.sort((h1, h2) -> Integer.compare(h2.priority, h1.priority));
+        if (pluginHooks != null) {
+            pluginHooks.sort((h1, h2) -> Integer.compare(h2.priority, h1.priority));
+        }
 
-        log.debug("Hook registered: plugin={}, type={}, id={}, priority={}",
-                pluginId, hookType, hookId, priority);
+        if (log.isDebugEnabled()) {
+            log.debug("Hook registered: plugin={}, type={}, id={}, priority={}",
+                    pluginId, hookType, hookId, priority);
+        }
 
         return hookId;
     }
@@ -56,8 +62,10 @@ public class DefaultPluginHookService implements PluginHookService {
             pluginHooks.remove(hook);
         }
 
-        log.debug("Hook unregistered: plugin={}, type={}, id={}",
-                hook.pluginId, hook.hookType, hookId);
+        if (log.isDebugEnabled()) {
+            log.debug("Hook unregistered: plugin={}, type={}, id={}",
+                    hook.pluginId, hook.hookType, hookId);
+        }
 
         return true;
     }
@@ -78,7 +86,9 @@ public class DefaultPluginHookService implements PluginHookService {
             pluginHooks.remove(hook);
         }
 
-        log.debug("Unregistered {} hooks for plugin={}, type={}", toRemove.size(), pluginId, hookType);
+        if (log.isDebugEnabled()) {
+            log.debug("Unregistered {} hooks for plugin={}, type={}", toRemove.size(), pluginId, hookType);
+        }
         return toRemove.size();
     }
 
@@ -86,7 +96,9 @@ public class DefaultPluginHookService implements PluginHookService {
     public HookContext executeHooks(String pluginId, HookType hookType, Map<String, Object> hookData) {
         List<RegisteredHook> pluginHooks = hooksByPlugin.get(pluginId);
         if (pluginHooks == null || pluginHooks.isEmpty()) {
-            log.debug("No hooks to execute for plugin={}, type={}", pluginId, hookType);
+            if (log.isDebugEnabled()) {
+                log.debug("No hooks to execute for plugin={}, type={}", pluginId, hookType);
+            }
             return new HookContextImpl(pluginId, hookType, hookData, false);
         }
 
@@ -97,18 +109,24 @@ public class DefaultPluginHookService implements PluginHookService {
                 .collect(Collectors.toList());
 
         if (hooksToExecute.isEmpty()) {
-            log.debug("No hooks of type {} for plugin={}", hookType, pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("No hooks of type {} for plugin={}", hookType, pluginId);
+            }
             return new HookContextImpl(pluginId, hookType, hookData, false);
         }
 
-        log.debug("Executing {} hooks for plugin={}, type={}", hooksToExecute.size(), pluginId, hookType);
+        if (log.isDebugEnabled()) {
+            log.debug("Executing {} hooks for plugin={}, type={}", hooksToExecute.size(), pluginId, hookType);
+        }
 
         HookContextImpl context = new HookContextImpl(pluginId, hookType, hookData, true);
 
         for (RegisteredHook hook : hooksToExecute) {
             if (context.isCancelled()) {
-                log.debug("Hook execution cancelled at plugin={}, type={}, hook={}",
-                        pluginId, hookType, hook.id);
+                if (log.isDebugEnabled()) {
+                    log.debug("Hook execution cancelled at plugin={}, type={}, hook={}",
+                            pluginId, hookType, hook.id);
+                }
                 break;
             }
 
@@ -120,12 +138,16 @@ public class DefaultPluginHookService implements PluginHookService {
                 // Record execution
                 recordExecution(pluginId, hookType, hook.id, executionTime, null);
 
-                log.debug("Hook executed: plugin={}, type={}, id={}, time={}ms",
-                        pluginId, hookType, hook.id, executionTime);
+                if (log.isDebugEnabled()) {
+                    log.debug("Hook executed: plugin={}, type={}, id={}, time={}ms",
+                            pluginId, hookType, hook.id, executionTime);
+                }
 
             } catch (Exception e) {
-                log.error("Hook execution failed: plugin={}, type={}, id={}",
-                        pluginId, hookType, hook.id, e);
+                if (log.isErrorEnabled()) {
+                    log.error("Hook execution failed: plugin={}, type={}, id={}",
+                            pluginId, hookType, hook.id, e);
+                }
                 recordExecution(pluginId, hookType, hook.id, 0, e);
             }
         }
@@ -137,7 +159,9 @@ public class DefaultPluginHookService implements PluginHookService {
     public Object executeHook(String hookId, Map<String, Object> hookData) {
         RegisteredHook hook = hooks.get(hookId);
         if (hook == null) {
-            log.warn("Hook not found: {}", hookId);
+            if (log.isWarnEnabled()) {
+                log.warn("Hook not found: {}", hookId);
+            }
             return null;
         }
 
@@ -150,12 +174,16 @@ public class DefaultPluginHookService implements PluginHookService {
 
             recordExecution(hook.pluginId, hook.hookType, hookId, executionTime, null);
 
-            log.debug("Single hook executed: plugin={}, type={}, id={}, time={}ms",
-                    hook.pluginId, hook.hookType, hookId, executionTime);
+            if (log.isDebugEnabled()) {
+                log.debug("Single hook executed: plugin={}, type={}, id={}, time={}ms",
+                        hook.pluginId, hook.hookType, hookId, executionTime);
+            }
 
         } catch (Exception e) {
-            log.error("Single hook execution failed: plugin={}, type={}, id={}",
-                    hook.pluginId, hook.hookType, hookId, e);
+            if (log.isErrorEnabled()) {
+                log.error("Single hook execution failed: plugin={}, type={}, id={}",
+                        hook.pluginId, hook.hookType, hookId, e);
+            }
             recordExecution(hook.pluginId, hook.hookType, hookId, 0, e);
         }
 
@@ -216,7 +244,9 @@ public class DefaultPluginHookService implements PluginHookService {
         List<HookExecutionRecord> records = executionHistory.get(pluginId);
         if (records != null) {
             records.clear();
-            log.debug("Hook execution history cleared for plugin: {}", pluginId);
+            if (log.isDebugEnabled()) {
+                log.debug("Hook execution history cleared for plugin: {}", pluginId);
+            }
         }
     }
 
@@ -241,7 +271,7 @@ public class DefaultPluginHookService implements PluginHookService {
     /**
      * Implementation of HookContext
      */
-    private static class HookContextImpl implements HookContext {
+    private static final class HookContextImpl implements HookContext {
         private final String pluginId;
         private final HookType hookType;
         private final Map<String, Object> hookData;
@@ -277,10 +307,14 @@ public class DefaultPluginHookService implements PluginHookService {
         public void cancel() {
             if (allowCancellation) {
                 this.cancelled = true;
-                log.debug("Hook execution cancelled for plugin={}, type={}", pluginId, hookType);
+                if (log.isDebugEnabled()) {
+                    log.debug("Hook execution cancelled for plugin={}, type={}", pluginId, hookType);
+                }
             } else {
-                log.warn("Attempted to cancel non-cancellable hook execution for plugin={}, type={}",
-                        pluginId, hookType);
+                if (log.isWarnEnabled()) {
+                    log.warn("Attempted to cancel non-cancellable hook execution for plugin={}, type={}",
+                            pluginId, hookType);
+                }
             }
         }
 
@@ -291,7 +325,7 @@ public class DefaultPluginHookService implements PluginHookService {
     /**
      * Registered hook information
      */
-    private static class RegisteredHook {
+    private static final class RegisteredHook {
         final String id;
         final String pluginId;
         final HookType hookType;
@@ -309,7 +343,9 @@ public class DefaultPluginHookService implements PluginHookService {
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
             RegisteredHook that = (RegisteredHook) o;
             return Objects.equals(id, that.id);
         }
@@ -323,7 +359,7 @@ public class DefaultPluginHookService implements PluginHookService {
     /**
      * Hook execution record for history
      */
-    private static class HookExecutionRecord {
+    private static final class HookExecutionRecord {
         final long timestamp;
         final HookType hookType;
         final String hookId;
