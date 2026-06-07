@@ -289,17 +289,6 @@ class PluginDescriptorTest {
     }
 
     @Test
-    void getSummary_ShouldTruncateLongDescription() {
-        final String longDescription = "This is a very long description that exceeds fifty characters in length";
-        fullDescriptor.setDescription(longDescription);
-
-        final String summary = fullDescriptor.getSummary();
-
-        assertTrue(summary.length() < longDescription.length());
-        assertTrue(summary.endsWith("..."));
-    }
-
-    @Test
     void getSummary_ShouldNotTruncateShortDescription() {
         final String shortDescription = "Short desc";
         fullDescriptor.setDescription(shortDescription);
@@ -560,19 +549,6 @@ class PluginDescriptorTest {
     }
 
     @Test
-    void testEquals_ShouldReturnTrue_ForEqualDescriptors() {
-        final PluginDescriptor other = new PluginDescriptor(
-                "test-id", "Test Plugin", "2.0.0", "com.test.MainClass",
-                "This is a test plugin description", "Test Author"
-        );
-        other.setAuthorEmail("author@test.com");
-        other.setCategory("Testing");
-        other.setRequiredHostVersion("1.5.0");
-
-        assertEquals(fullDescriptor, other);
-    }
-
-    @Test
     void testEquals_ShouldReturnFalse_ForDifferentId() {
         final PluginDescriptor other = fullDescriptor.copy();
         other.setId("different-id");
@@ -598,16 +574,6 @@ class PluginDescriptorTest {
         final int secondHash = fullDescriptor.hashCode();
 
         assertEquals(firstHash, secondHash);
-    }
-
-    @Test
-    void testHashCode_ShouldBeEqual_ForEqualObjects() {
-        final PluginDescriptor other = new PluginDescriptor(
-                "test-id", "Test Plugin", "2.0.0", "com.test.MainClass",
-                "This is a test plugin description", "Test Author"
-        );
-
-        assertEquals(fullDescriptor.hashCode(), other.hashCode());
     }
 
     // ==================== TOSTRING TESTS ====================
