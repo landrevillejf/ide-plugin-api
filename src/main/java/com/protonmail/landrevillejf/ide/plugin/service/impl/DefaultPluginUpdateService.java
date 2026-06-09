@@ -284,7 +284,7 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         }
     }
 
-    private void checkAndAutoUpdate(String pluginId) {
+    public void checkAndAutoUpdate(String pluginId) {
         PluginVersion update = checkForUpdates(pluginId);
         if (update != null && isAutoUpdateEnabled(pluginId)) {
             if (log.isInfoEnabled()) {
