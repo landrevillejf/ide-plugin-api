@@ -490,4 +490,754 @@ class PluginServiceInitializerTest {
         assertNotNull(validator.getSchema("plugin"));
         assertNotNull(validator.getDefaultConfiguration("plugin"));
     }
+
+    // ==================== TESTS SUPPLEMENTAIRES POUR TUER LES MUTANTS ====================
+
+    @Test
+    void stubLoggingService_GetStatistics_ShouldReturnEmptyMap() {
+        // Given
+        PluginLoggingService loggingService = PluginServiceInitializer.StubServices.LOGGING_SERVICE;
+
+        // When
+        var stats = loggingService.getStatistics("any-plugin");
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubCacheService_Put_WithTTL_ShouldNotThrowException() {
+        // Given
+        PluginCacheService cacheService = PluginServiceInitializer.StubServices.CACHE_SERVICE;
+
+        // When/Then - le mutant sur put avec TTL (ligne 227)
+        assertDoesNotThrow(() -> cacheService.put("plugin", "key", "value", 5000));
+        assertEquals("value", cacheService.get("plugin", "key"));
+    }
+
+    @Test
+    void stubCacheService_Get_WithClass_ShouldReturnNullWhenTypeMismatch() {
+        // Given
+        PluginCacheService cacheService = PluginServiceInitializer.StubServices.CACHE_SERVICE;
+        cacheService.put("plugin", "key", "stringValue");
+
+        // When
+        Integer result = cacheService.get("plugin", "key", Integer.class);
+
+        // Then - ligne 229, cast conditionnel
+        assertNull(result);
+    }
+
+    @Test
+    void stubCacheService_GetKeys_ShouldReturnListOfKeys() {
+        // Given
+        PluginCacheService cacheService = PluginServiceInitializer.StubServices.CACHE_SERVICE;
+        cacheService.put("plugin", "key1", "value1");
+        cacheService.put("plugin", "key2", "value2");
+
+        // When
+        var keys = cacheService.getKeys("plugin");
+
+        // Then - ligne 239
+        assertNotNull(keys);
+        assertEquals(2, keys.size());
+        assertTrue(keys.contains("key1"));
+        assertTrue(keys.contains("key2"));
+    }
+
+    @Test
+    void stubCacheService_ClearAll_ShouldClearAllPluginData() {
+        // Given
+        PluginCacheService cacheService = PluginServiceInitializer.StubServices.CACHE_SERVICE;
+        cacheService.put("plugin1", "key", "value1");
+        cacheService.put("plugin2", "key", "value2");
+
+        // When - ligne 233
+        cacheService.clearAll();
+
+        // Then
+        assertNull(cacheService.get("plugin1", "key"));
+        assertNull(cacheService.get("plugin2", "key"));
+    }
+
+    @Test
+    void stubNotificationService_GetStatistics_ShouldReturnEmptyMap() {
+        // Given
+        PluginNotificationService notificationService = PluginServiceInitializer.StubServices.NOTIFICATION_SERVICE;
+
+        // When
+        var stats = notificationService.getStatistics("plugin");
+
+        // Then - ligne 253
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubMetricsService_GetAllMetrics_ShouldReturnNonEmptyMapAfterIncrement() {
+        // Given
+        PluginMetricsService metricsService = PluginServiceInitializer.StubServices.METRICS_SERVICE;
+        metricsService.incrementCounter("plugin", "test.metric", 42);
+
+        // When - ligne 266
+        var allMetrics = metricsService.getAllMetrics("plugin");
+
+        // Then
+        assertNotNull(allMetrics);
+        assertEquals(42L, allMetrics.get("test.metric"));
+    }
+
+    @Test
+    void stubMetricsService_Timer_GetElapsedMillis_ShouldReturnNonNegative() {
+        // Given
+        PluginMetricsService metricsService = PluginServiceInitializer.StubServices.METRICS_SERVICE;
+        var timer = metricsService.startTimer("plugin", "timer");
+
+        // When
+        long elapsed = timer.getElapsedMillis();
+        long stopped = timer.stop();
+
+        // Then - ligne 262 (getElapsedMillis et stop)
+        assertTrue(elapsed >= 0);
+        assertTrue(stopped >= 0);
+    }
+
+    @Test
+    void stubPermissionService_RevokePermission_ShouldReturnFalseWhenNotExists() {
+        // Given
+        PluginPermissionService permissionService = PluginServiceInitializer.StubServices.PERMISSION_SERVICE;
+
+        // When - ligne 277
+        boolean result = permissionService.revokePermission("plugin", "nonexistent");
+
+        // Then
+        assertFalse(result);
+    }
+
+    @Test
+    void stubPermissionService_HasAllPermissions_WithNullSet_ShouldReturnFalse() {
+        // Given
+        PluginPermissionService permissionService = PluginServiceInitializer.StubServices.PERMISSION_SERVICE;
+
+        // When - plugin n'a aucun permission (set est null ou vide)
+        boolean result = permissionService.hasAllPermissions("unknown-plugin", "perm1", "perm2");
+
+        // Then - ligne 279
+        assertFalse(result);
+    }
+
+    @Test
+    void stubPermissionService_HasAnyPermission_WithNullSet_ShouldReturnFalse() {
+        // Given
+        PluginPermissionService permissionService = PluginServiceInitializer.StubServices.PERMISSION_SERVICE;
+
+        // When - plugin n'a aucun permission
+        boolean result = permissionService.hasAnyPermission("unknown-plugin", "perm1", "perm2");
+
+        // Then - ligne 280
+        assertFalse(result);
+    }
+
+    @Test
+    void stubAsyncExecutor_IncrementCounter_ShouldWorkMultipleTimes() {
+        // Given
+        PluginAsyncTaskExecutor executor = PluginServiceInitializer.StubServices.ASYNC_EXECUTOR;
+
+        // When - ligne 300 (Replaced integer addition with subtraction)
+        String taskId1 = executor.executeNamedTask("plugin", "task1", () -> {});
+        String taskId2 = executor.executeNamedTask("plugin", "task2", () -> {});
+
+        // Then
+        assertNotEquals(taskId1, taskId2);
+    }
+
+    @Test
+    void stubConfigValidator_GetSchema_ShouldReturnEmptyMap() {
+        // Given
+        PluginConfigurationValidator validator = PluginServiceInitializer.StubServices.CONFIG_VALIDATOR;
+
+        // When - ligne 319
+        var schema = validator.getSchema("plugin");
+
+        // Then
+        assertNotNull(schema);
+        assertTrue(schema.isEmpty());
+    }
+
+    @Test
+    void stubConfigValidator_GetDefaultConfiguration_ShouldReturnEmptyMap() {
+        // Given
+        PluginConfigurationValidator validator = PluginServiceInitializer.StubServices.CONFIG_VALIDATOR;
+
+        // When - ligne 323
+        var defaultConfig = validator.getDefaultConfiguration("plugin");
+
+        // Then
+        assertNotNull(defaultConfig);
+        assertTrue(defaultConfig.isEmpty());
+    }
+
+    @Test
+    void stubDataStore_Delete_ShouldReturnFalseWhenKeyNotExists() {
+        // Given
+        PluginDataStore dataStore = PluginServiceInitializer.StubServices.DATA_STORE;
+
+        // When - ligne 350
+        boolean result = dataStore.delete("plugin", "nonexistent");
+
+        // Then
+        assertFalse(result);
+    }
+
+    @Test
+    void stubDataStore_Store_WithFormat_ShouldWork() {
+        // Given
+        PluginDataStore dataStore = PluginServiceInitializer.StubServices.DATA_STORE;
+
+        // When - ligne 346
+        assertDoesNotThrow(() -> dataStore.store("plugin", "key", "value", PluginDataStore.SerializationFormat.JSON));
+
+        // Then
+        assertEquals("value", dataStore.retrieve("plugin", "key"));
+    }
+
+    @Test
+    void stubResourceManager_GetStatistics_ShouldReturnEmptyMap() {
+        // Given
+        PluginResourceManager resourceManager = PluginServiceInitializer.StubServices.RESOURCE_MANAGER;
+
+        // When - ligne 379
+        var stats = resourceManager.getStatistics();
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubUpdateService_GetUpdateStatistics_ShouldReturnEmptyMap() {
+        // Given
+        PluginUpdateService updateService = PluginServiceInitializer.StubServices.UPDATE_SERVICE;
+
+        // When - ligne 411
+        var stats = updateService.getUpdateStatistics();
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubMonitoringService_GetHealthReport_ShouldReturnNonNull() {
+        // Given
+        PluginMonitoringService monitoringService = PluginServiceInitializer.StubServices.MONITORING_SERVICE;
+
+        // When - ligne 415
+        var report = monitoringService.getHealthReport("plugin");
+
+        // Then
+        assertNotNull(report);
+        assertEquals("plugin", report.getPluginId());
+        assertEquals(PluginMonitoringService.HealthStatus.HEALTHY, report.getStatus());
+        assertNotNull(report.getDetails());
+    }
+
+    @Test
+    void stubHookService_ExecuteHooks_ShouldReturnNonNullContext() {
+        // Given
+        PluginHookService hookService = PluginServiceInitializer.StubServices.HOOK_SERVICE;
+
+        // When - ligne 335
+        var context = hookService.executeHooks("plugin", PluginHookService.HookType.PRE_ENABLE, new java.util.HashMap<>());
+
+        // Then
+        assertNotNull(context);
+        assertEquals("plugin", context.getPluginId());
+        assertEquals(PluginHookService.HookType.PRE_ENABLE, context.getHookType());
+        assertNotNull(context.getHookData());
+        assertFalse(context.isCancelled());
+    }
+
+    @Test
+    void stubPermissionService_GrantPermission_WithExistingSet_ShouldAddPermission() {
+        // Given
+        PluginPermissionService permissionService = PluginServiceInitializer.StubServices.PERMISSION_SERVICE;
+
+        // First grant
+        permissionService.grantPermission("plugin", "perm1");
+
+        // When - second grant for same plugin (lambda line 276)
+        boolean result = permissionService.grantPermission("plugin", "perm2");
+
+        // Then
+        assertTrue(result);
+        assertTrue(permissionService.hasPermission("plugin", "perm1"));
+        assertTrue(permissionService.hasPermission("plugin", "perm2"));
+    }
+
+    // ==================== TESTS POUR TUER LES MUTANTS RESTANTS ====================
+
+    @Test
+    void stubLoggingService_GetStatistics_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 221 (EMPTY_RETURNS)
+        PluginLoggingService loggingService = PluginServiceInitializer.StubServices.LOGGING_SERVICE;
+
+        // When
+        var stats = loggingService.getStatistics("any-plugin");
+
+        // Then - Vérifier que la map est bien vide (pas null)
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+        // Le mutant remplacerait par Collections.emptyMap() - même comportement,
+        // mais on vérifie l'instance
+        assertTrue(stats instanceof java.util.HashMap);
+    }
+
+    @Test
+    void stubCacheService_GetStatistics_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 237 (EMPTY_RETURNS)
+        PluginCacheService cacheService = PluginServiceInitializer.StubServices.CACHE_SERVICE;
+
+        // When
+        var stats = cacheService.getStatistics("plugin");
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+        assertTrue(stats instanceof java.util.HashMap);
+    }
+
+    @Test
+    void stubMetricsService_GetMetricsByType_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 267 (EMPTY_RETURNS)
+        PluginMetricsService metricsService = PluginServiceInitializer.StubServices.METRICS_SERVICE;
+
+        // When
+        var metrics = metricsService.getMetricsByType("plugin", PluginMetricsService.MetricType.COUNTER);
+
+        // Then
+        assertNotNull(metrics);
+        assertTrue(metrics.isEmpty());
+    }
+
+    @Test
+    void stubMetricsService_GetMetricStatistics_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 270 (EMPTY_RETURNS)
+        PluginMetricsService metricsService = PluginServiceInitializer.StubServices.METRICS_SERVICE;
+
+        // When
+        var stats = metricsService.getMetricStatistics("plugin", "metric");
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubMetricsService_ExportMetrics_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 271 (EMPTY_RETURNS)
+        PluginMetricsService metricsService = PluginServiceInitializer.StubServices.METRICS_SERVICE;
+
+        // When
+        var exported = metricsService.exportMetrics("plugin");
+
+        // Then
+        assertNotNull(exported);
+        assertTrue(exported.isEmpty());
+    }
+
+    @Test
+    void stubPermissionService_GetPluginPermissions_ShouldReturnEmptySet_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 281 (EMPTY_RETURNS)
+        PluginPermissionService permissionService = PluginServiceInitializer.StubServices.PERMISSION_SERVICE;
+
+        // When
+        var permissions = permissionService.getPluginPermissions("unknown-plugin");
+
+        // Then
+        assertNotNull(permissions);
+        assertTrue(permissions.isEmpty());
+    }
+
+    @Test
+    void stubPermissionService_AssignRole_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 282 (FALSE_RETURNS)
+        PluginPermissionService permissionService = PluginServiceInitializer.StubServices.PERMISSION_SERVICE;
+
+        // When
+        boolean result = permissionService.assignRole("plugin", "admin");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubPermissionService_RemoveRole_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 283 (FALSE_RETURNS)
+        PluginPermissionService permissionService = PluginServiceInitializer.StubServices.PERMISSION_SERVICE;
+
+        // When
+        boolean result = permissionService.removeRole("plugin", "admin");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubAsyncExecutor_ExecuteTaskWithPriority_ShouldReturnTaskId_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 301 (NULL_RETURNS et INCREMENTS)
+        PluginAsyncTaskExecutor executor = PluginServiceInitializer.StubServices.ASYNC_EXECUTOR;
+
+        // When
+        String taskId = executor.executeTaskWithPriority("plugin", () -> {},
+                PluginAsyncTaskExecutor.TaskPriority.NORMAL);
+
+        // Then
+        assertNotNull(taskId);
+        assertTrue(taskId.startsWith("task-"));
+
+        // Vérifier que le compteur s'incrémente (tuer le mutant sur l'addition)
+        String taskId2 = executor.executeTaskWithPriority("plugin", () -> {},
+                PluginAsyncTaskExecutor.TaskPriority.HIGH);
+        assertNotEquals(taskId, taskId2);
+    }
+
+    @Test
+    void stubAsyncExecutor_ScheduleTask_ShouldReturnTaskId_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 303 (NULL_RETURNS et INCREMENTS)
+        PluginAsyncTaskExecutor executor = PluginServiceInitializer.StubServices.ASYNC_EXECUTOR;
+
+        // When
+        String taskId = executor.scheduleTask("plugin", () -> {}, 1000);
+
+        // Then
+        assertNotNull(taskId);
+        assertTrue(taskId.startsWith("task-"));
+
+        // Vérifier l'incrémentation
+        String taskId2 = executor.scheduleTask("plugin", () -> {}, 2000);
+        assertNotEquals(taskId, taskId2);
+    }
+
+    @Test
+    void stubAsyncExecutor_SchedulePeriodicTask_ShouldReturnTaskId_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 304 (NULL_RETURNS et INCREMENTS)
+        PluginAsyncTaskExecutor executor = PluginServiceInitializer.StubServices.ASYNC_EXECUTOR;
+
+        // When
+        String taskId = executor.schedulePeriodicTask("plugin", () -> {}, 1000, 5000);
+
+        // Then
+        assertNotNull(taskId);
+        assertTrue(taskId.startsWith("task-"));
+
+        // Vérifier l'incrémentation
+        String taskId2 = executor.schedulePeriodicTask("plugin", () -> {}, 1000, 5000);
+        assertNotEquals(taskId, taskId2);
+    }
+
+    @Test
+    void stubAsyncExecutor_GetThreadPoolSize_ShouldReturnOne_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 311 (PRIMITIVE_RETURNS)
+        PluginAsyncTaskExecutor executor = PluginServiceInitializer.StubServices.ASYNC_EXECUTOR;
+
+        // When
+        int poolSize = executor.getThreadPoolSize("plugin");
+
+        // Then
+        assertEquals(1, poolSize); // Le mutant remplacerait par 0
+    }
+
+    @Test
+    void stubAsyncExecutor_GetStatistics_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 312 (EMPTY_RETURNS)
+        PluginAsyncTaskExecutor executor = PluginServiceInitializer.StubServices.ASYNC_EXECUTOR;
+
+        // When
+        var stats = executor.getStatistics("plugin");
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubConfigValidator_ValidateValue_ShouldReturnValidResult_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 318 (NULL_RETURNS)
+        PluginConfigurationValidator validator = PluginServiceInitializer.StubServices.CONFIG_VALIDATOR;
+
+        // When
+        var result = validator.validateValue("plugin", "path", "value");
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isValid());
+    }
+
+    @Test
+    void stubConfigValidator_GetCustomValidators_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 322 (EMPTY_RETURNS)
+        PluginConfigurationValidator validator = PluginServiceInitializer.StubServices.CONFIG_VALIDATOR;
+
+        // When
+        var validators = validator.getCustomValidators("plugin");
+
+        // Then
+        assertNotNull(validators);
+        assertTrue(validators.isEmpty());
+    }
+
+    @Test
+    void stubConfigValidator_MergeWithDefaults_ShouldReturnPartialConfig_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 324 (EMPTY_RETURNS)
+        PluginConfigurationValidator validator = PluginServiceInitializer.StubServices.CONFIG_VALIDATOR;
+        java.util.Map<String, Object> partial = new java.util.HashMap<>();
+        partial.put("key", "value");
+
+        // When
+        var merged = validator.mergeWithDefaults("plugin", partial);
+
+        // Then
+        assertNotNull(merged);
+        assertEquals("value", merged.get("key"));
+        assertEquals(1, merged.size());
+    }
+
+    @Test
+    void stubConfigValidator_GenerateSampleConfiguration_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 325 (EMPTY_RETURNS)
+        PluginConfigurationValidator validator = PluginServiceInitializer.StubServices.CONFIG_VALIDATOR;
+
+        // When
+        var sample = validator.generateSampleConfiguration("plugin");
+
+        // Then
+        assertNotNull(sample);
+        assertTrue(sample.isEmpty());
+    }
+
+    @Test
+    void stubConfigValidator_GetValidationRules_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 326 (EMPTY_RETURNS)
+        PluginConfigurationValidator validator = PluginServiceInitializer.StubServices.CONFIG_VALIDATOR;
+
+        // When
+        var rules = validator.getValidationRules("plugin");
+
+        // Then
+        assertNotNull(rules);
+        assertTrue(rules.isEmpty());
+    }
+
+    @Test
+    void stubHookService_RegisterHookWithPriority_ShouldReturnHookId_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 332 (NULL_RETURNS et INCREMENTS)
+        PluginHookService hookService = PluginServiceInitializer.StubServices.HOOK_SERVICE;
+
+        // When - Utiliser une lambda void (sans return)
+        String hookId = hookService.registerHookWithPriority("plugin",
+                PluginHookService.HookType.PRE_ENABLE, 10, data -> {});
+
+        // Then
+        assertNotNull(hookId);
+        assertTrue(hookId.startsWith("hook-"));
+
+        // Vérifier l'incrémentation
+        String hookId2 = hookService.registerHookWithPriority("plugin",
+                PluginHookService.HookType.PRE_ENABLE, 20, data -> {});
+        assertNotEquals(hookId, hookId2);
+    }
+
+    @Test
+    void stubDataStore_Retrieve_WithClass_ShouldReturnNullWhenTypeMismatch_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 348 (REMOVE_CONDITIONALS)
+        PluginDataStore dataStore = PluginServiceInitializer.StubServices.DATA_STORE;
+        dataStore.store("plugin", "key", "stringValue");
+
+        // When
+        Integer result = dataStore.retrieve("plugin", "key", Integer.class);
+
+        // Then
+        assertNull(result); // Le cast échoue, retourne null
+    }
+
+    @Test
+    void stubDataStore_Backup_ShouldReturnBackupId_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 357 (EMPTY_RETURNS)
+        PluginDataStore dataStore = PluginServiceInitializer.StubServices.DATA_STORE;
+
+        // When
+        String backupId = dataStore.backup("plugin");
+
+        // Then
+        assertNotNull(backupId);
+        assertTrue(backupId.startsWith("backup-"));
+        assertFalse(backupId.isEmpty());
+    }
+
+    @Test
+    void stubDataStore_Restore_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 358 (FALSE_RETURNS)
+        PluginDataStore dataStore = PluginServiceInitializer.StubServices.DATA_STORE;
+
+        // When
+        boolean result = dataStore.restore("plugin", "backup-123");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubDataStore_DeleteBackup_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 360 (FALSE_RETURNS)
+        PluginDataStore dataStore = PluginServiceInitializer.StubServices.DATA_STORE;
+
+        // When
+        boolean result = dataStore.deleteBackup("plugin", "backup-123");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubDataStore_GetStatistics_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 361 (EMPTY_RETURNS)
+        PluginDataStore dataStore = PluginServiceInitializer.StubServices.DATA_STORE;
+
+        // When
+        var stats = dataStore.getStatistics("plugin");
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubResourceManager_RegisterResourceWithMetadata_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 366 (FALSE_RETURNS)
+        PluginResourceManager resourceManager = PluginServiceInitializer.StubServices.RESOURCE_MANAGER;
+
+        // When
+        boolean result = resourceManager.registerResourceWithMetadata("plugin", "resId", "name",
+                "description", "type", new Object(), new java.util.HashMap<>());
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubResourceManager_RevokeResourceAccess_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 374 (FALSE_RETURNS)
+        PluginResourceManager resourceManager = PluginServiceInitializer.StubServices.RESOURCE_MANAGER;
+
+        // When
+        boolean result = resourceManager.revokeResourceAccess("plugin", "resId");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubResourceManager_UpdateResource_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 377 (FALSE_RETURNS)
+        PluginResourceManager resourceManager = PluginServiceInitializer.StubServices.RESOURCE_MANAGER;
+
+        // When
+        boolean result = resourceManager.updateResource("plugin", "resId", "newValue");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubDependencyResolver_RemoveDependency_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 384 (FALSE_RETURNS)
+        PluginDependencyResolver resolver = PluginServiceInitializer.StubServices.DEPENDENCY_RESOLVER;
+
+        // When
+        boolean result = resolver.removeDependency("plugin", "depId");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubDependencyResolver_ValidateDependencies_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 394 (EMPTY_RETURNS)
+        PluginDependencyResolver resolver = PluginServiceInitializer.StubServices.DEPENDENCY_RESOLVER;
+
+        // When
+        var result = resolver.validateDependencies("plugin");
+
+        // Then
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+    }
+
+    @Test
+    void stubDependencyResolver_GetDependencyGraph_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 395 (EMPTY_RETURNS)
+        PluginDependencyResolver resolver = PluginServiceInitializer.StubServices.DEPENDENCY_RESOLVER;
+
+        // When
+        var graph = resolver.getDependencyGraph("plugin");
+
+        // Then
+        assertNotNull(graph);
+        assertTrue(graph.isEmpty());
+    }
+
+    @Test
+    void stubUpdateService_RollbackVersion_ShouldReturnTrue_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 405 (FALSE_RETURNS)
+        PluginUpdateService updateService = PluginServiceInitializer.StubServices.UPDATE_SERVICE;
+
+        // When
+        boolean result = updateService.rollbackVersion("plugin", "1.0.0");
+
+        // Then
+        assertTrue(result); // Le mutant remplacerait par false
+    }
+
+    @Test
+    void stubMonitoringService_GetGlobalStatistics_ShouldReturnEmptyMap_AndKillMutant() {
+        // Given - Pour tuer le mutant ligne 431 (EMPTY_RETURNS)
+        PluginMonitoringService monitoringService = PluginServiceInitializer.StubServices.MONITORING_SERVICE;
+
+        // When
+        var stats = monitoringService.getGlobalStatistics();
+
+        // Then
+        assertNotNull(stats);
+        assertTrue(stats.isEmpty());
+    }
+
+    @Test
+    void stubCacheService_Get_WithClass_WhenValueIsInstance_ShouldReturnValue() {
+        // Given - Pour tester le chemin où l'instance correspond (ligne 229)
+        PluginCacheService cacheService = PluginServiceInitializer.StubServices.CACHE_SERVICE;
+        cacheService.put("plugin", "key", "stringValue");
+
+        // When
+        String result = cacheService.get("plugin", "key", String.class);
+
+        // Then
+        assertEquals("stringValue", result);
+    }
+
+    @Test
+    void stubHookService_GetHookData_ShouldReturnOriginalMap() {
+        // Given - Pour tuer le mutant ligne 335 (EMPTY_RETURNS sur getHookData)
+        PluginHookService hookService = PluginServiceInitializer.StubServices.HOOK_SERVICE;
+        java.util.Map<String, Object> hookData = new java.util.HashMap<>();
+        hookData.put("test", "value");
+
+        // When
+        var context = hookService.executeHooks("plugin", PluginHookService.HookType.PRE_ENABLE, hookData);
+
+        // Then
+        assertNotNull(context.getHookData());
+        assertEquals("value", context.getHookData().get("test"));
+    }
 }
