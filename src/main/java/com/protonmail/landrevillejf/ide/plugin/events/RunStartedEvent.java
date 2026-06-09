@@ -1,5 +1,8 @@
 package com.protonmail.landrevillejf.ide.plugin.events;
 
+import lombok.Getter;
+
+@Getter
 public class RunStartedEvent extends BaseEvent {
     private final String projectPath;
     private final String runConfiguration;
@@ -10,11 +13,4 @@ public class RunStartedEvent extends BaseEvent {
         this.runConfiguration = runConfiguration;
     }
 
-    public String getProjectPath() {
-        return projectPath;
-    }
-
-    public String getRunConfiguration() {
-        return runConfiguration;
-    }
 }

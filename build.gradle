@@ -148,6 +148,7 @@ tasks.register('jacocoGenerateReport') {
 }
 
 // ==================== PIT MUTATION TESTING ====================
+apply plugin: 'info.solidsoft.pitest'
 pitest {
     targetClasses = ['com.protonmail.landrevillejf.ide.plugin.*']
     threads = 4

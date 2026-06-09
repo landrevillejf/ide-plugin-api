@@ -1,5 +1,8 @@
 package com.protonmail.landrevillejf.ide.plugin.events;
 
+import lombok.Getter;
+
+@Getter
 public class TabSelectedEvent extends BaseEvent {
     private final String tabId;
     private final String tabTitle;
@@ -10,11 +13,4 @@ public class TabSelectedEvent extends BaseEvent {
         this.tabTitle = tabTitle;
     }
 
-    public String getTabId() {
-        return tabId;
-    }
-
-    public String getTabTitle() {
-        return tabTitle;
-    }
 }

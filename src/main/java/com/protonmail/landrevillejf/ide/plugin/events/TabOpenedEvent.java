@@ -1,5 +1,8 @@
 package com.protonmail.landrevillejf.ide.plugin.events;
 
+import lombok.Getter;
+
+@Getter
 public class TabOpenedEvent extends BaseEvent {
     private final String tabId;
     private final String tabTitle;
@@ -14,19 +17,4 @@ public class TabOpenedEvent extends BaseEvent {
         this.tabType = tabType;
     }
 
-    public String getTabId() {
-        return tabId;
-    }
-
-    public String getTabTitle() {
-        return tabTitle;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public String getTabType() {
-        return tabType;
-    }
 }

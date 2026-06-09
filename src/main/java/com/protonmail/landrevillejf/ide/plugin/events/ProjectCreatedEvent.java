@@ -1,5 +1,8 @@
 package com.protonmail.landrevillejf.ide.plugin.events;
 
+import lombok.Getter;
+
+@Getter
 public class ProjectCreatedEvent extends BaseEvent {
     private final String projectPath;
     private final String projectName;
@@ -12,15 +15,4 @@ public class ProjectCreatedEvent extends BaseEvent {
         this.projectType = projectType;
     }
 
-    public String getProjectPath() {
-        return projectPath;
-    }
-
-    public String getProjectName() {
-        return projectName;
-    }
-
-    public String getProjectType() {
-        return projectType;
-    }
 }
