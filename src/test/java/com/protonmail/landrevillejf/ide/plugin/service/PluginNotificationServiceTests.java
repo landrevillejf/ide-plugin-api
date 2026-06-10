@@ -8,6 +8,8 @@ import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for PluginNotificationService interface
@@ -101,6 +103,70 @@ public class PluginNotificationServiceTests {
         notificationService.registerListener(PLUGIN_ID, listener);
 
         assertThatNoException().isThrownBy(() -> notificationService.unregisterListener(PLUGIN_ID, listener));
+    }
+
+    @Test
+    void priority_GetLevel_ShouldReturnCorrectLevel() {
+        assertEquals(0, PluginNotificationService.Priority.LOW.getLevel());
+        assertEquals(1, PluginNotificationService.Priority.NORMAL.getLevel());
+        assertEquals(2, PluginNotificationService.Priority.HIGH.getLevel());
+        assertEquals(3, PluginNotificationService.Priority.CRITICAL.getLevel());
+    }
+
+    @Test
+    void priority_Values_ShouldContainAllPriorities() {
+        PluginNotificationService.Priority[] values = PluginNotificationService.Priority.values();
+        assertEquals(4, values.length);
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.Priority.LOW));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.Priority.NORMAL));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.Priority.HIGH));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.Priority.CRITICAL));
+    }
+
+    @Test
+    void priority_ValueOf_ShouldReturnCorrectEnum() {
+        assertEquals(PluginNotificationService.Priority.LOW,
+                PluginNotificationService.Priority.valueOf("LOW"));
+        assertEquals(PluginNotificationService.Priority.NORMAL,
+                PluginNotificationService.Priority.valueOf("NORMAL"));
+        assertEquals(PluginNotificationService.Priority.HIGH,
+                PluginNotificationService.Priority.valueOf("HIGH"));
+        assertEquals(PluginNotificationService.Priority.CRITICAL,
+                PluginNotificationService.Priority.valueOf("CRITICAL"));
+    }
+
+    // ==================== NOTIFICATION TYPE ENUM TESTS ====================
+
+    @Test
+    void notificationType_Values_ShouldContainAllTypes() {
+        PluginNotificationService.NotificationType[] values = PluginNotificationService.NotificationType.values();
+        assertEquals(6, values.length);
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.NotificationType.INFO));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.NotificationType.SUCCESS));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.NotificationType.WARNING));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.NotificationType.ERROR));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.NotificationType.DEBUG));
+        assertTrue(java.util.Arrays.asList(values).contains(PluginNotificationService.NotificationType.CUSTOM));
+    }
+
+    @Test
+    void notificationType_ValueOf_ShouldReturnCorrectEnum() {
+        assertEquals(PluginNotificationService.NotificationType.INFO,
+                PluginNotificationService.NotificationType.valueOf("INFO"));
+        assertEquals(PluginNotificationService.NotificationType.SUCCESS,
+                PluginNotificationService.NotificationType.valueOf("SUCCESS"));
+        assertEquals(PluginNotificationService.NotificationType.WARNING,
+                PluginNotificationService.NotificationType.valueOf("WARNING"));
+        assertEquals(PluginNotificationService.NotificationType.ERROR,
+                PluginNotificationService.NotificationType.valueOf("ERROR"));
+    }
+
+    @Test
+    void testPriorityGetLevel() {
+        assertEquals(0, PluginNotificationService.Priority.LOW.getLevel());
+        assertEquals(1, PluginNotificationService.Priority.NORMAL.getLevel());
+        assertEquals(2, PluginNotificationService.Priority.HIGH.getLevel());
+        assertEquals(3, PluginNotificationService.Priority.CRITICAL.getLevel());
     }
 
     // Mock implementation for testing
