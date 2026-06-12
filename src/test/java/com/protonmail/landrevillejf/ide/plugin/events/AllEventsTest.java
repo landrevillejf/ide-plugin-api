@@ -4,6 +4,9 @@ import com.protonmail.landrevillejf.ide.plugin.PluginStatus;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -261,13 +264,31 @@ class AllEventsTest {
     }
 
     @Test
-    void testFileSavedEvent() {
-        FileSavedEvent event = new FileSavedEvent("file-plugin", "/path/file.txt");
+    void testFileSavedEvent() throws IOException {
+        // Create a temporary file for testing
+        Path tempFile = Files.createTempFile("test", ".txt");
+        String content = "Test content for file saved event";
+        Files.writeString(tempFile, content);
+        String filePath = tempFile.toString();
+
+        FileSavedEvent event = new FileSavedEvent("file-plugin", filePath);
+
         assertEquals("file-plugin", event.getSource());
-        assertEquals("/path/file.txt", event.getFilePath());
+        assertEquals(filePath, event.getFilePath());
         assertNotNull(event.getFile());
         assertEquals("txt", event.getFileType());
+        assertEquals(content.getBytes().length, event.getFileSize());
         assertEquals(event.getFile().length(), event.getFileSize());
+        assertNotNull(event.getTimestamp());
+
+        // Test with non-existent file
+        FileSavedEvent nonExistentEvent = new FileSavedEvent("file-plugin", "/nonexistent/path/file.txt");
+        assertEquals("/nonexistent/path/file.txt", nonExistentEvent.getFilePath());
+        assertNotNull(nonExistentEvent.getFile());
+        assertEquals(0L, nonExistentEvent.getFileSize());
+
+        // Clean up
+        Files.deleteIfExists(tempFile);
     }
 
     // ==================== MENU EVENTS ====================
