@@ -3,13 +3,15 @@ name: Create Release
 on:
   push:
     tags:
-      - 'v*'  # Déclenché quand on pousse un tag comme v1.0.0, v3.0.1, etc.
+      - 'v*'  # v1.0.0, v2.1.3, etc.
+  workflow_dispatch:  # Permet de déclencher manuellement si besoin
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Permet de créer la release
+      contents: write
+      packages: write  # Si vous voulez publier sur GitHub Packages
 
     steps:
       - name: Checkout code
@@ -20,6 +22,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -27,12 +30,21 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build fatJar
 
+      - name: List artifacts
+        run: |
+          echo "Generated artifacts:"
+          ls -la build/libs/
+          echo "File count: $(ls -1 build/libs/*.jar 2>/dev/null | wc -l)"
+
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2  # Version plus récente
         with:
           files: |
             build/libs/*.jar
             build/libs/*-fat.jar
+            build/libs/*-sources.jar
+            build/libs/*-javadoc.jar
           generate_release_notes: true
+          make_latest: true  # Marque comme latest release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
