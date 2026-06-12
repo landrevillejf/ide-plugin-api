@@ -98,7 +98,7 @@ public class PanelUtil {
         }
     }
 
-    private String generatePanelId() {
+    public String generatePanelId() {
         return pluginId + "-" + System.currentTimeMillis();
     }
 
