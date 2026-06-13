@@ -1,6 +1,6 @@
 # IDE Plugin API
 
-[![Version](https://img.shields.io/badge/version-3.0.1-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
+[![Version](https://img.shields.io/badge/version-1.3.0-RC-1-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
 [![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -82,7 +82,7 @@ The IDE Plugin API provides a robust framework for extending the IDE with custom
 ### Prerequisites
 
 - Java 21 or higher
-- IDE 3.0.0 or higher
+- IDE 1.0.0 or higher
 - Gradle 8.0+ (for building)
 
 ### Creating Your First Plugin
@@ -193,7 +193,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'com.protonmail.landrevillejf:plugin-api:3.0.0'
+    compileOnly 'com.protonmail.landrevillejf:plugin-api:1.0.0'
     compileOnly 'org.projectlombok:lombok:1.18.28'
     annotationProcessor 'org.projectlombok:lombok:1.18.28'
 }
@@ -204,7 +204,7 @@ jar {
             'Plugin-Id': 'my-plugin',
             'Plugin-Version': '1.0.0',
             'Plugin-Main-Class': 'com.example.myplugin.MyPlugin',
-            'Plugin-Required-Host-Version': '3.0.0'
+            'Plugin-Required-Host-Version': '1.0.0'
         )
     }
 }
@@ -220,7 +220,7 @@ plugin.version=1.0.0
 plugin.main.class=com.example.myplugin.MyPlugin
 plugin.author=Your Name
 plugin.description=My awesome plugin description
-plugin.required.host.version=3.0.0
+plugin.required.host.version=1.0.0
 ```
 
 ## Plugin Development
@@ -871,10 +871,10 @@ if (context instanceof ExtendedPluginContext) {
 ## API Version Compatibility
 
 | Plugin API Version | IDE Version | Changes |
-|-------------------|------------------|---------|
-| 3.0.0 | 3.0.0+ | Initial release |
-| 3.1.0 | 3.1.0+ | Added UIComponentAccessor |
-| 3.2.0 | 3.2.0+ | Added Build Manager integration |
+|--------------------|-------------|---------|
+| 1.0.0              | 1.0.0+      | Initial release |
+| 1.1.0              | 1.1.0+      | Added UIComponentAccessor |
+| 1.2.0              | 1.2.0+      | Added Build Manager integration |
 
 ## Contributing
 
