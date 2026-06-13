@@ -1,6 +1,6 @@
 # IDE Plugin API
 
-[![Version](https://img.shields.io/badge/version-1.3.0RC1-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
+[![Version](https://img.shields.io/badge/version-1.3.0RC1-blue.svg)](...)
 [![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
@@ -896,6 +896,6 @@ This project is licensed under the MIT License.
 
 ---
 
-**Version**: 1.3.0-RC-1  
+**Version**: 1.3.0-RC1  
 **Last Updated**: 2026-06-05  
 **Maintainer**: Jean-Francois Landreville, landrevilejf@protonmail.com

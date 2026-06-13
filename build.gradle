@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'com.protonmail.landrevillejf.ide.plugin.api'
-version = '1.3.0-RC-1'
+version = project.findProperty('version') ?: '1.0.0-SNAPSHOT'
 
 repositories {
     mavenCentral()

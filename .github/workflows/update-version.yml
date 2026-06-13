@@ -1,0 +1,37 @@
+name: Update Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (ex: 1.3.0-RC1)'
+        required: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update build.gradle
+        run: |
+          sed -i "s/version = '.*'/version = '${{ github.event.inputs.version }}'/g" build.gradle
+
+      - name: Update README badges
+        run: |
+          sed -i "s/version-[0-9.]*RC[0-9]*/version-${{ github.event.inputs.version }}/g" README.md
+          sed -i "s/Version**: .*/Version**: ${{ github.event.inputs.version }}/g" README.md
+
+      - name: Update CHANGELOG
+        run: |
+          DATE=$(date +'%Y-%m-%d')
+          # Ajouter l'entrée de version dans CHANGELOG.md
+
+      - name: Commit and Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add build.gradle README.md CHANGELOG.md
+          git commit -m "chore: bump version to ${{ github.event.inputs.version }}"
+          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
+          git push origin main --tags
