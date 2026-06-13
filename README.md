@@ -1,9 +1,10 @@
 # IDE Plugin API
 
-[![Version](https://img.shields.io/badge/version-1.3.0RC1-blue.svg)](...)
+# IDE Plugin API
+
+[![Version](https://img.shields.io/github/v/release/landrevillejf/ide-plugin-api?include_prereleases&label=version&color=blue)](https://github.com/landrevillejf/ide-plugin-api/releases)
 [![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
 [![Build Status](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml/badge.svg)](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml)
 [![Tests](https://img.shields.io/badge/tests-1134%20total%2C%201131%20passed%2C%203%20failed%2C%2036%20skipped-green.svg)](https://github.com/landrevillejf/ide-plugin-api/actions)
 [![Coverage](https://img.shields.io/badge/coverage-72%25-green.svg)](https://github.com/landrevillejf/ide-plugin-api/actions/workflows/release.yml)
