@@ -1,6 +1,6 @@
 # IDE Plugin API
 
-[![Version](https://img.shields.io/badge/version-1.3.0-RC-1-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
+[![Version](https://img.shields.io/badge/version-1.3.0RC1-blue.svg)](https://github.com/landrevillejf/ide-plugin-api)
 [![Java](https://img.shields.io/badge/Java-21+-orange.svg)](https://www.oracle.com/java/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
