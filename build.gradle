@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id 'maven-publish'
     id 'jacoco'
     id 'checkstyle'
     id 'info.solidsoft.pitest' version '1.19.0-rc.3' apply true
@@ -285,5 +286,27 @@ sonar {
         property "sonar.host.url", "http://localhost:9000"
         property "sonar.coverage.jacoco.xmlReportPaths", "${buildDir}/reports/jacoco/test/xml/jacocoTestReport.xml"
         property "sonar.junit.reportPaths", "${buildDir}/test-results/test"
+    }
+}
+
+// ==================== PUBLISHING (GitHub Packages) ====================
+publishing {
+    repositories {
+        maven {
+            name = 'GitHubPackages'
+            url = uri('https://maven.pkg.github.com/landrevillejf/ide-plugin-api')
+            credentials {
+                username = System.getenv('USERNAME')
+                password = System.getenv('TOKEN')
+            }
+        }
+    }
+    publications {
+        gpr(MavenPublication) {
+            from components.java
+            groupId = project.group
+            artifactId = 'ide-plugin-api'
+            version = project.version
+        }
     }
 }

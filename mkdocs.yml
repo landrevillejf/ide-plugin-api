@@ -1,0 +1,52 @@
+site_name: IDE Plugin API
+site_description: >-
+  Engineering documentation for the IDE Plugin API: architecture, audit,
+  optimization plan and implementation roadmap.
+site_url: https://landrevillejf.github.io/ide-plugin-api/
+repo_url: https://github.com/landrevillejf/ide-plugin-api
+repo_name: landrevillejf/ide-plugin-api
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Architecture: ARCHITECTURE.md
+  - Development Guide: DEVELOPMENT.md
+  - Audit Report: AUDIT.md
+  - Optimization Plan: OPTIMIZATION.md
+  - Implementation Plan: IMPLEMENTATION_PLAN.md

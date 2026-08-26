@@ -24,6 +24,19 @@
 
 A comprehensive, modular plugin system for the IDE that allows developers to extend the IDE with custom functionality, UI components, and services.
 
+## 📄 Project Documentation
+
+In-depth engineering documentation lives in [`docs/`](docs/), published as a website via
+MkDocs: **[landrevillejf.github.io/ide-plugin-api](https://landrevillejf.github.io/ide-plugin-api/)**
+(deployed automatically from `main` by `.github/workflows/docs.yml`).
+
+| Document | Contents |
+|----------|----------|
+| [docs/AUDIT.md](docs/AUDIT.md) | Full project audit: findings (critical → low), security & test assessment, measured metrics |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Architecture reference: components, lifecycle, event system, service layer, build pipeline |
+| [docs/OPTIMIZATION.md](docs/OPTIMIZATION.md) | Optimization plan: runtime, security, build/CI, API & DX improvements |
+| [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md) | Phased roadmap (1.3.0-RC2 → 2.0.0) with acceptance criteria and risks |
+
 ## 📋 Table of Contents
 
 - [Overview](#overview)
@@ -891,7 +904,7 @@ This project is licensed under the MIT License.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/swing-ide/issues)
+- **Issues**: [GitHub Issues](https://github.com/landrevillejf/ide-plugin-api/issues)
 - **Email**: support@IDE.com
 - **Documentation**: [docs.IDE.com](https://docs.IDE.com)
 
