@@ -518,50 +518,48 @@ public class DefaultPluginDataStore implements PluginDataStore {
         }
 
         private byte[] serialize(Object data, SerializationFormat format) throws Exception {
-            switch (format) {
-                case JSON:
-                    return jsonMapper.writeValueAsBytes(data);
-                case XML:
-                    return xmlMapper.writeValueAsBytes(data);
-                case PROPERTIES:
-                    if (data instanceof Map) {
-                        Properties props = new Properties();
-                        props.putAll((Map<?, ?>) data);
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        props.store(baos, null);
-                        return baos.toByteArray();
-                    }
-                    throw new IllegalArgumentException("Properties format requires Map data");
-                case BINARY:
-                    if (data instanceof Serializable) {
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        ObjectOutputStream oos = new ObjectOutputStream(baos);
-                        oos.writeObject(data);
-                        oos.close();
-                        return baos.toByteArray();
-                    }
-                    throw new IllegalArgumentException("Binary format requires Serializable data");
-                default:
-                    throw new IllegalArgumentException("Unsupported format: " + format);
+            if (format == SerializationFormat.JSON) {
+                return jsonMapper.writeValueAsBytes(data);
             }
+            if (format == SerializationFormat.XML) {
+                return xmlMapper.writeValueAsBytes(data);
+            }
+            if (format == SerializationFormat.PROPERTIES) {
+                if (data instanceof Map) {
+                    Properties props = new Properties();
+                    props.putAll((Map<?, ?>) data);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    props.store(baos, null);
+                    return baos.toByteArray();
+                }
+                throw new IllegalArgumentException("Properties format requires Map data");
+            }
+            // BINARY is the only remaining format
+            if (data instanceof Serializable) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(baos);
+                oos.writeObject(data);
+                oos.close();
+                return baos.toByteArray();
+            }
+            throw new IllegalArgumentException("Binary format requires Serializable data");
         }
 
         private Object deserialize(byte[] data, SerializationFormat format) throws Exception {
-            switch (format) {
-                case JSON:
-                    return jsonMapper.readValue(data, Object.class);
-                case XML:
-                    return xmlMapper.readValue(data, Object.class);
-                case PROPERTIES:
-                    Properties props = new Properties();
-                    props.load(new ByteArrayInputStream(data));
-                    return props;
-                case BINARY:
-                    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
-                    return ois.readObject();
-                default:
-                    throw new IllegalArgumentException("Unsupported format: " + format);
+            if (format == SerializationFormat.JSON) {
+                return jsonMapper.readValue(data, Object.class);
             }
+            if (format == SerializationFormat.XML) {
+                return xmlMapper.readValue(data, Object.class);
+            }
+            if (format == SerializationFormat.PROPERTIES) {
+                Properties props = new Properties();
+                props.load(new ByteArrayInputStream(data));
+                return props;
+            }
+            // BINARY is the only remaining format
+            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+            return ois.readObject();
         }
 
         private Path getDataFile(String key) {

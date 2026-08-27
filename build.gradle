@@ -41,12 +41,15 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:5.3.1'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.3.1'
     testImplementation 'org.assertj:assertj-core:3.24.1'
-    testImplementation 'org.slf4j:slf4j-simple:2.0.9'
+    testImplementation 'ch.qos.logback:logback-classic:1.5.12'
 
     // Cucumber
     testImplementation 'io.cucumber:cucumber-java:7.14.0'
     testImplementation 'io.cucumber:cucumber-junit-platform-engine:7.14.0'
     testImplementation 'org.junit.platform:junit-platform-suite:1.10.0'
+
+    // Karate BDD
+    testImplementation 'com.intuit.karate:karate-junit5:1.4.1'
 
     // Jars pour les tests
     testImplementation name: 'ide-core-0.3.2-SNAPSHOT', ext: 'jar'
@@ -56,6 +59,17 @@ dependencies {
 
     // Code source principal pour les tests
     testImplementation sourceSets.main.output
+}
+
+// Karate feature files live next to their Java runners in src/test/java;
+// expose them on the test classpath as resources.
+sourceSets {
+    test {
+        resources {
+            srcDir 'src/test/java'
+            exclude '**/*.java'
+        }
+    }
 }
 
 // ==================== JACOCO CONFIGURATION ====================
@@ -76,7 +90,8 @@ test {
 
     jvmArgs = [
             "-Djava.awt.headless=true",
-            "-Dslf4j.provider=org.slf4j.simple.SimpleServiceProvider"
+            // IconManager ships a shaded slf4j-simple; pin Logback so tests can capture logs
+            "-Dslf4j.provider=ch.qos.logback.classic.spi.LogbackServiceProvider"
     ]
 
     testClassesDirs = sourceSets.test.output.classesDirs
@@ -116,15 +131,65 @@ jacocoTestReport {
                     '**/test/**',
                     '**/mock/**',
                     '**/cucumber/**',
+                    '**/karate/**',
                     '**/*Test*',
                     '**/*Runner*',
-                    '**/SecurePluginClassLoader*',
-                    '**/DefaultPluginManager*',
                     '**/bdd/**'
             ])
         }))
     }
 }
+
+// ⭐ STRICT COVERAGE GATE: 100% on all counters
+jacocoTestCoverageVerification {
+    dependsOn test
+
+    violationRules {
+        rule {
+            limit {
+                counter = 'INSTRUCTION'
+                value = 'COVEREDRATIO'
+                minimum = 1.0
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 1.0
+            }
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 1.0
+            }
+            limit {
+                counter = 'METHOD'
+                value = 'COVEREDRATIO'
+                minimum = 1.0
+            }
+            limit {
+                counter = 'CLASS'
+                value = 'COVEREDRATIO'
+                minimum = 1.0
+            }
+        }
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                    '**/test/**',
+                    '**/mock/**',
+                    '**/cucumber/**',
+                    '**/karate/**',
+                    '**/*Test*',
+                    '**/*Runner*',
+                    '**/bdd/**'
+            ])
+        }))
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
 
 // ⭐ NETTOYER LES CACHES JACOCO
 tasks.register('cleanJacoco') {
@@ -153,18 +218,21 @@ pitest {
     mutators = ['DEFAULTS']
     verbose = true
     junit5PluginVersion = '1.2.1'
-    mutationThreshold = 0
-    coverageThreshold = 0
+    mutationThreshold = 100
+    coverageThreshold = 100
+    testStrengthThreshold = 100
     failWhenNoMutations = false
-    skipFailingTests = true
+    skipFailingTests = false
 
-    excludedTestClasses = [
-            '**.bdd.*',
-            '**.cucumber.*',
-            '**.*Cucumber*',
-            '**.*Runner*',
-            '**.SecurePluginClassLoaderTest',
-            '**.DefaultPluginManagerTest'
+    // Lock acquire/release and background scheduler registration have no
+    // observable effect in single-threaded unit tests; mutating them only
+    // produces equivalent mutants.
+    avoidCallsTo = [
+            'java.util.concurrent.locks',
+            'java.util.concurrent.ScheduledExecutorService',
+            'java.util.concurrent.Executors',
+            // JVM shutdown hook registration is not observable inside unit tests
+            'java.lang.Runtime'
     ]
 
     excludedClasses = [
@@ -176,12 +244,12 @@ pitest {
             '**.Application*',
             '**.bdd.*',
             '**.cucumber.*',
-            '**.SecurePluginClassLoader',
-            '**.DefaultPluginManager'
+            '**.karate.*'
     ]
 
     excludedMethods = ['main', 'toString', 'hashCode', 'equals', 'clone']
-    jvmArgs = ['-Djava.awt.headless=true']
+    jvmArgs = ['-Djava.awt.headless=true',
+               '-Dslf4j.provider=ch.qos.logback.classic.spi.LogbackServiceProvider']
 }
 
 // ==================== JAVA CONFIGURATION ====================
@@ -236,6 +304,8 @@ tasks.register('cucumberTest', Test) {
     systemProperty 'cucumber.plugin', 'pretty, html:build/reports/cucumber/cucumber-report.html, json:build/reports/cucumber/cucumber-report.json'
     systemProperty 'cucumber.glue', 'com.protonmail.landrevillejf.ide.plugin.bdd.steps'
     systemProperty 'cucumber.features', 'src/test/resources/features'
+
+    jvmArgs = ['-Dslf4j.provider=ch.qos.logback.classic.spi.LogbackServiceProvider']
 
     testLogging {
         events "passed", "skipped", "failed"

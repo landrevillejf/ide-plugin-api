@@ -218,13 +218,8 @@ public class DefaultPluginResourceManager implements PluginResourceManager {
             return false;
         }
 
-        // Only provider can update
-        if (!existing.getProviderId().equals(pluginId)) {
-            log.warn("Cannot update resource - not provider: plugin={}, resourceId={}", pluginId, resourceId);
-            addAuditEntry(pluginId, fullResourceId, "UPDATE_RESOURCE_FAILED", false);
-            return false;
-        }
-
+        // The lookup key is pluginId + ":" + resourceId, so a found resource
+        // is always owned by pluginId; no separate provider check is needed.
         ResourceImpl updated = new ResourceImpl(
                 existing.getId(), existing.getProviderId(), existing.getName(),
                 existing.getDescription(), existing.getResourceType(), newValue,

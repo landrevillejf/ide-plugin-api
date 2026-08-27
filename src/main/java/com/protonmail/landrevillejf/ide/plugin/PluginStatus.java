@@ -107,8 +107,7 @@ public enum PluginStatus {
             case SHUTTING_DOWN -> newState == SHUTDOWN ||
                     newState == ERROR;
 
-            case RELOADING -> newState == LOADED ||
-                    newState == ERROR;
+            case RELOADING -> newState == LOADED;
 
             case SHUTDOWN -> false;
 

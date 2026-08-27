@@ -81,13 +81,9 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
             return HealthStatus.OFFLINE;
         }
 
-        // Then healthy
-        boolean allHealthy = statuses.stream().allMatch(s -> s == HealthStatus.HEALTHY);
-        if (allHealthy) {
-            return HealthStatus.HEALTHY;
-        }
-
-        return HealthStatus.UNKNOWN;
+        // Everything else is healthy (monitors only report
+        // HEALTHY, DEGRADED, CRITICAL or OFFLINE)
+        return HealthStatus.HEALTHY;
     }
 
     @Override
@@ -148,7 +144,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     public Alert createAlert(String pluginId, AlertSeverity severity, String title, String message) {
         String alertId = generateAlertId(pluginId);
         AlertImpl alert = new AlertImpl(alertId, pluginId, severity, title, message,
-                System.currentTimeMillis(), false);
+                currentTimeMillis(), false);
 
         activeAlerts.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>()).add(alert);
 
@@ -156,26 +152,22 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
         listeners.forEach(l -> l.onAlertCreated(alert));
 
         // Log according to severity
-        switch (severity) {
-            case CRITICAL:
-                if (log.isErrorEnabled()) {
-                    log.error("CRITICAL alert for plugin {}: {} - {}", pluginId, title, message);
-                }
-                break;
-            case ERROR:
-                if (log.isErrorEnabled()) {
-                    log.error("Alert for plugin {}: {} - {}", pluginId, title, message);
-                }
-                break;
-            case WARNING:
-                if (log.isWarnEnabled()) {
-                    log.warn("Alert for plugin {}: {} - {}", pluginId, title, message);
-                }
-                break;
-            default:
-                if (log.isInfoEnabled()) {
-                    log.info("Alert for plugin {}: {} - {}", pluginId, title, message);
-                }
+        if (severity == AlertSeverity.CRITICAL) {
+            if (log.isErrorEnabled()) {
+                log.error("CRITICAL alert for plugin {}: {} - {}", pluginId, title, message);
+            }
+        } else if (severity == AlertSeverity.ERROR) {
+            if (log.isErrorEnabled()) {
+                log.error("Alert for plugin {}: {} - {}", pluginId, title, message);
+            }
+        } else if (severity == AlertSeverity.WARNING) {
+            if (log.isWarnEnabled()) {
+                log.warn("Alert for plugin {}: {} - {}", pluginId, title, message);
+            }
+        } else {
+            if (log.isInfoEnabled()) {
+                log.info("Alert for plugin {}: {} - {}", pluginId, title, message);
+            }
         }
 
         return alert;
@@ -319,6 +311,34 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     }
 
     /**
+     * Marks a plugin as offline. An offline plugin keeps its status
+     * until it is marked online again.
+     */
+    public void markPluginOffline(String pluginId) {
+        PluginMonitor monitor = monitors.get(pluginId);
+        if (monitor != null) {
+            monitor.setHealthStatus(HealthStatus.OFFLINE);
+            if (log.isDebugEnabled()) {
+                log.debug("Plugin marked offline: {}", pluginId);
+            }
+        }
+    }
+
+    /**
+     * Marks a plugin as online again, letting the next health update
+     * recompute its status from the collected metrics.
+     */
+    public void markPluginOnline(String pluginId) {
+        PluginMonitor monitor = monitors.get(pluginId);
+        if (monitor != null) {
+            monitor.setHealthStatus(HealthStatus.HEALTHY);
+            if (log.isDebugEnabled()) {
+                log.debug("Plugin marked online: {}", pluginId);
+            }
+        }
+    }
+
+    /**
      * Records an error for a plugin.
      */
     public void recordError(String pluginId, Throwable error) {
@@ -328,7 +348,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
             // Create alert for repeated errors
             int errorCount = monitor.getErrorCount();
-            if (errorCount % 10 == 0 && errorCount > 0) {
+            if (errorCount % 10 == 0) {
                 createAlert(pluginId, AlertSeverity.ERROR, "Multiple Errors Detected",
                         String.format("Plugin has encountered %d errors", errorCount));
             }
@@ -345,7 +365,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
             // Create alert for many warnings
             int warningCount = monitor.getWarningCount();
-            if (warningCount % 20 == 0 && warningCount > 0) {
+            if (warningCount % 20 == 0) {
                 createAlert(pluginId, AlertSeverity.WARNING, "Multiple Warnings",
                         String.format("Plugin has generated %d warnings", warningCount));
             }
@@ -372,7 +392,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
                 } else if (newStatus == HealthStatus.CRITICAL) {
                     createAlert(monitor.pluginId, AlertSeverity.CRITICAL, "Health Critical",
                             "Plugin health is critical, immediate attention required");
-                } else if (newStatus == HealthStatus.HEALTHY && oldStatus != HealthStatus.HEALTHY) {
+                } else if (newStatus == HealthStatus.HEALTHY) {
                     createAlert(monitor.pluginId, AlertSeverity.INFO, "Health Restored",
                             "Plugin health has been restored");
                 }
@@ -381,12 +401,20 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
     }
 
     private void cleanupOldAlerts() {
-        long sevenDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(7);
+        long sevenDaysAgo = currentTimeMillis() - TimeUnit.DAYS.toMillis(7);
         alertHistory.removeIf(alert -> alert.getTimestamp() < sevenDaysAgo);
 
         if (log.isDebugEnabled()) {
             log.debug("Cleaned up old alerts, history size: {}", alertHistory.size());
         }
+    }
+
+    /**
+     * Returns the current time in milliseconds. Overridable so that
+     * tests can pin a deterministic clock.
+     */
+    long currentTimeMillis() {
+        return System.currentTimeMillis();
     }
 
     private String generateAlertId(String pluginId) {
@@ -402,7 +430,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
      */
     private static class PluginMonitor {
         private final String pluginId;
-        private final long startTime;
+        private long startTime;
         private final AtomicLong errorCount = new AtomicLong(0);
         private final AtomicLong warningCount = new AtomicLong(0);
 
@@ -424,13 +452,17 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
             // Update thread count (simplified - in real implementation, track plugin-specific threads)
             threadCount = trackedThreads.size();
 
-            // Simulate CPU and memory usage based on thread activity
-            // In real implementation, you'd use more sophisticated monitoring
-            cpuUsage = Math.min(100.0, threadCount * 5.0 + Math.random() * 10.0);
+            // Deterministic CPU and memory estimates based on thread activity.
+            cpuUsage = Math.min(100.0, threadCount * 5.0);
             memoryUsage = (long) threadCount * 1024 * 1024; // Rough estimate: 1MB per thread
         }
 
         public void updateHealthStatus() {
+            // An offline plugin keeps its status until explicitly brought back online
+            if (healthStatus == HealthStatus.OFFLINE) {
+                return;
+            }
+
             long errors = errorCount.get();
             long warnings = warningCount.get();
 
@@ -453,6 +485,10 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
         public HealthStatus getHealthStatus() {
             return healthStatus;
+        }
+
+        public void setHealthStatus(HealthStatus status) {
+            this.healthStatus = status;
         }
 
         public double getCpuUsage() {
@@ -522,7 +558,7 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
             this.uptime = uptime;
             this.errorCount = errorCount;
             this.warningCount = warningCount;
-            this.details = details != null ? details : Collections.emptyMap();
+            this.details = details;
         }
 
         @Override

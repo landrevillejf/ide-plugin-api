@@ -1,0 +1,6 @@
+<configuration>
+    <!-- Keep test output silent by default; individual tests attach a
+         ListAppender programmatically via LogCapture when they need to
+         observe log events. -->
+    <root level="OFF"/>
+</configuration>

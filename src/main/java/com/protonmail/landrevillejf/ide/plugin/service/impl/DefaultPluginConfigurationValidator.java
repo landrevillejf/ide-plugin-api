@@ -123,7 +123,7 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
             return new HashMap<>(partialConfig);
         }
 
-        Map<String, Object> merged = new LinkedHashMap<>(defaults);
+        Map<String, Object> merged = deepCopyMap(defaults);
         mergeDeep(merged, partialConfig);
 
         log.debug("Merged configuration for plugin {}: {} fields", pluginId, merged.size());
@@ -185,7 +185,7 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
             @SuppressWarnings("unchecked")
             Map<String, Object> properties = (Map<String, Object>) schema.get("properties");
 
-            for (Map.Entry<String, String> entry : flattenConfig(config).entrySet()) {
+            for (Map.Entry<String, Object> entry : flattenConfig(config).entrySet()) {
                 String path = entry.getKey();
                 Object value = entry.getValue();
 
@@ -393,7 +393,8 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
     private boolean isValidEmail(String email) {
         if (email == null || email.isEmpty()) return false;
         return email.contains("@") && email.indexOf("@") > 0 &&
-                email.lastIndexOf(".") > email.indexOf("@") + 1;
+                email.lastIndexOf(".") > email.indexOf("@") + 1 &&
+                email.lastIndexOf(".") < email.length() - 1;
     }
 
     private boolean isValidUrl(String url) {
@@ -417,15 +418,15 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
         return current;
     }
 
-    private Map<String, String> flattenConfig(Map<String, Object> config) {
-        Map<String, String> flat = new LinkedHashMap<>();
+    private Map<String, Object> flattenConfig(Map<String, Object> config) {
+        Map<String, Object> flat = new LinkedHashMap<>();
         flattenConfigRecursive(config, "", flat);
         return flat;
     }
 
     @SuppressWarnings("unchecked")
     private void flattenConfigRecursive(Map<String, Object> config, String prefix,
-                                        Map<String, String> result) {
+                                        Map<String, Object> result) {
         for (Map.Entry<String, Object> entry : config.entrySet()) {
             String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
             Object value = entry.getValue();
@@ -433,7 +434,7 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
             if (value instanceof Map) {
                 flattenConfigRecursive((Map<String, Object>) value, key, result);
             } else {
-                result.put(key, value != null ? value.toString() : "null");
+                result.put(key, value);
             }
         }
     }
@@ -519,6 +520,20 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
     }
 
     @SuppressWarnings("unchecked")
+    private Map<String, Object> deepCopyMap(Map<String, Object> source) {
+        Map<String, Object> copy = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : source.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof Map) {
+                copy.put(entry.getKey(), deepCopyMap((Map<String, Object>) value));
+            } else {
+                copy.put(entry.getKey(), value);
+            }
+        }
+        return copy;
+    }
+
+    @SuppressWarnings("unchecked")
     private void mergeDeep(Map<String, Object> target, Map<String, Object> source) {
         for (Map.Entry<String, Object> entry : source.entrySet()) {
             String key = entry.getKey();
@@ -526,6 +541,8 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
 
             if (value instanceof Map && target.containsKey(key) && target.get(key) instanceof Map) {
                 mergeDeep((Map<String, Object>) target.get(key), (Map<String, Object>) value);
+            } else if (value instanceof Map) {
+                target.put(key, deepCopyMap((Map<String, Object>) value));
             } else {
                 target.put(key, value);
             }

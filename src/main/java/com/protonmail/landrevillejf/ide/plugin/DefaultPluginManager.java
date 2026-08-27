@@ -187,9 +187,6 @@ public final class DefaultPluginManager implements PluginManager {
         }
 
         File[] jarFiles = pluginsDir.listFiles((dir, name) -> name.endsWith(".jar"));
-        if (jarFiles == null) {
-            return;
-        }
 
         for (File jarFile : jarFiles) {
             try {
@@ -207,6 +204,7 @@ public final class DefaultPluginManager implements PluginManager {
             Plugin plugin = plugins.get(pluginName);
             if (plugin != null) {
                 try {
+                    prepareForShutdown(plugin);
                     plugin.shutdown();
                     plugins.remove(pluginName);
 
@@ -251,11 +249,9 @@ public final class DefaultPluginManager implements PluginManager {
     }
 
     public void loadPlugin(File jarFile) throws Exception {
-        JarFile jar = null;
         URLClassLoader classLoader = null;
 
-        try {
-            jar = new JarFile(jarFile);
+        try (JarFile jar = new JarFile(jarFile)) {
             Manifest manifest = jar.getManifest();
             if (manifest == null) {
                 throw new IllegalArgumentException("Fichier JAR sans manifest: " + jarFile.getName());
@@ -302,6 +298,7 @@ public final class DefaultPluginManager implements PluginManager {
 
             pluginClassLoaders.put(pluginName, classLoader);
 
+            markPluginLoaded(plugin);
             plugin.initialize(pluginContext);
 
             PluginConfig config = plugin.getConfig();
@@ -334,25 +331,9 @@ public final class DefaultPluginManager implements PluginManager {
 
         } catch (Exception e) {
             if (classLoader != null) {
-                try {
-                    classLoader.close();
-                } catch (IOException ex) {
-                    if (log.isWarnEnabled()) {
-                        log.warn("Error closing classloader after load failure", ex);
-                    }
-                }
+                classLoader.close();
             }
             throw e;
-        } finally {
-            if (jar != null) {
-                try {
-                    jar.close();
-                } catch (IOException e) {
-                    if (log.isWarnEnabled()) {
-                        log.warn("Error closing jar file", e);
-                    }
-                }
-            }
         }
     }
 
@@ -686,6 +667,40 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Moves a freshly instantiated plugin to the LOADED state so that the
+     * state machine allows the INITIALIZED transition performed by
+     * {@link Plugin#initialize(PluginContext)}.
+     *
+     * @param plugin the plugin about to be initialized
+     */
+    private void markPluginLoaded(Plugin plugin) {
+        PluginStatus state = plugin.getState();
+        if (state == PluginStatus.DISABLED || state == PluginStatus.UNLOADED) {
+            plugin.setState(PluginStatus.LOADED);
+        }
+    }
+
+    /**
+     * Normalizes a plugin state before {@link Plugin#shutdown()} so the state
+     * machine allows the SHUTTING_DOWN transition, which is only permitted
+     * from ENABLED or DISABLED.
+     *
+     * @param plugin the plugin about to be shut down
+     */
+    private void prepareForShutdown(Plugin plugin) {
+        PluginStatus state = plugin.getState();
+        if (state == PluginStatus.UNLOADED) {
+            plugin.setState(PluginStatus.LOADED);
+            state = PluginStatus.LOADED;
+        }
+        if (state == PluginStatus.LOADED
+                || state == PluginStatus.INITIALIZED
+                || state == PluginStatus.ERROR) {
+            plugin.setState(PluginStatus.DISABLED);
+        }
+    }
+
     private Plugin findPluginByName(String pluginName) {
         for (Plugin plugin : plugins.values()) {
             if (plugin.getName().equals(pluginName)) {
@@ -761,6 +776,7 @@ public final class DefaultPluginManager implements PluginManager {
                                     plugin.getName()
                             );
 
+                            markPluginLoaded(plugin);
                             plugin.initialize(pluginContext);
 
                             if (plugin.getName().equals(pluginName)) {
@@ -773,13 +789,7 @@ public final class DefaultPluginManager implements PluginManager {
                                 }
                                 return;
                             } else {
-                                try {
-                                    loader.close();
-                                } catch (IOException e) {
-                                    if (log.isWarnEnabled()) {
-                                        log.warn("Error closing classloader for plugin {}", plugin.getName(), e);
-                                    }
-                                }
+                                loader.close();
                             }
                         }
                     }

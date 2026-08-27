@@ -263,14 +263,6 @@ public class DefaultPluginCacheService implements PluginCacheService {
             lock.writeLock().lock();
             try {
                 this.evictionPolicy = policy;
-                // Reorder entries based on new policy if needed
-                if (policy == EvictionPolicy.FIFO) {
-                    // FIFO doesn't need reordering as insertion order is preserved
-                } else if (policy == EvictionPolicy.LRU) {
-                    // Reorder by last access (already handled in get())
-                } else if (policy == EvictionPolicy.LFU) {
-                    // LFU would require frequency counters - implement if needed
-                }
             } finally {
                 lock.writeLock().unlock();
             }
@@ -393,7 +385,14 @@ public class DefaultPluginCacheService implements PluginCacheService {
         }
 
         public boolean isExpired() {
-            return expiryTime > 0 && System.currentTimeMillis() > expiryTime;
+            return isExpired(System.currentTimeMillis());
+        }
+
+        /**
+         * Deterministic expiry check, visible for testing.
+         */
+        boolean isExpired(long currentTimeMillis) {
+            return expiryTime > 0 && currentTimeMillis > expiryTime;
         }
     }
 }

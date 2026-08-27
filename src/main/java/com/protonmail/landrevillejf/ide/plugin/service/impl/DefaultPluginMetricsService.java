@@ -125,38 +125,30 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
 
     @Override
     public Map<String, Object> getMetricsByType(String pluginId, MetricType type) {
-        switch (type) {
-            case COUNTER:
-                Map<String, CounterMetric> pluginCounters = counters.get(pluginId);
-                if (pluginCounters != null) {
-                    return pluginCounters.entrySet().stream()
-                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getValue()));
-                }
-                break;
-            case TIMER:
-                Map<String, TimerMetric> pluginTimers = timers.get(pluginId);
-                if (pluginTimers != null) {
-                    return pluginTimers.entrySet().stream()
-                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getStatistics()));
-                }
-                break;
-            case HISTOGRAM:
-                Map<String, HistogramMetric> pluginHistograms = histograms.get(pluginId);
-                if (pluginHistograms != null) {
-                    return pluginHistograms.entrySet().stream()
-                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getStatistics()));
-                }
-                break;
-            case GAUGE:
-                Map<String, GaugeMetric> pluginGauges = gauges.get(pluginId);
-                if (pluginGauges != null) {
-                    return pluginGauges.entrySet().stream()
-                            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getValue()));
-                }
-                break;
-            default:
-                // Default case for exhaustive switch
-                break;
+        if (type == MetricType.COUNTER) {
+            Map<String, CounterMetric> pluginCounters = counters.get(pluginId);
+            if (pluginCounters != null) {
+                return pluginCounters.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getValue()));
+            }
+        } else if (type == MetricType.TIMER) {
+            Map<String, TimerMetric> pluginTimers = timers.get(pluginId);
+            if (pluginTimers != null) {
+                return pluginTimers.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getStatistics()));
+            }
+        } else if (type == MetricType.HISTOGRAM) {
+            Map<String, HistogramMetric> pluginHistograms = histograms.get(pluginId);
+            if (pluginHistograms != null) {
+                return pluginHistograms.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getStatistics()));
+            }
+        } else if (type == MetricType.GAUGE) {
+            Map<String, GaugeMetric> pluginGauges = gauges.get(pluginId);
+            if (pluginGauges != null) {
+                return pluginGauges.entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getValue()));
+            }
         }
         return Collections.emptyMap();
     }
@@ -324,12 +316,8 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         synchronized void record(long duration) {
             count.increment();
             total.add(duration);
-            if (duration < min) {
-                min = duration;
-            }
-            if (duration > max) {
-                max = duration;
-            }
+            min = Math.min(min, duration);
+            max = Math.max(max, duration);
         }
 
         Map<String, Object> getStatistics() {
@@ -339,7 +327,7 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
                 stats.put("count", cnt);
                 stats.put("total_ms", total.sum());
                 stats.put("avg_ms", (double) total.sum() / cnt);
-                stats.put("min_ms", min == Long.MAX_VALUE ? 0L : min);
+                stats.put("min_ms", min);
                 stats.put("max_ms", max);
             } else {
                 stats.put("count", 0L);
@@ -364,12 +352,8 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
         synchronized void record(long value) {
             count.increment();
             total.add(value);
-            if (value < min) {
-                min = value;
-            }
-            if (value > max) {
-                max = value;
-            }
+            min = Math.min(min, value);
+            max = Math.max(max, value);
 
             // Record in appropriate bucket
             for (int bucket : BUCKETS) {
@@ -387,7 +371,7 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
                 stats.put("count", cnt);
                 stats.put("sum", total.sum());
                 stats.put("avg", (double) total.sum() / cnt);
-                stats.put("min", min == Long.MAX_VALUE ? 0L : min);
+                stats.put("min", min);
                 stats.put("max", max);
 
                 // Add percentiles (simplified)

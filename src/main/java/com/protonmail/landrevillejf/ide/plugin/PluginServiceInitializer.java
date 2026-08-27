@@ -112,6 +112,8 @@ public class PluginServiceInitializer {
      * This is used when no specific service implementations are provided.
      */
     public static class StubPluginServiceLocator implements PluginServiceLocator {
+        private final java.util.Map<Class<?>, Object> registeredServices = new java.util.concurrent.ConcurrentHashMap<>();
+
         @Override
         public PluginLoggingService getLoggingService() {
             return StubServices.LOGGING_SERVICE;
@@ -178,13 +180,60 @@ public class PluginServiceInitializer {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         public <T> T getService(Class<T> serviceInterface) {
+            T custom = (T) registeredServices.get(serviceInterface);
+            if (custom != null) {
+                return custom;
+            }
+            if (serviceInterface == PluginLoggingService.class) {
+                return (T) getLoggingService();
+            }
+            if (serviceInterface == PluginCacheService.class) {
+                return (T) getCacheService();
+            }
+            if (serviceInterface == PluginNotificationService.class) {
+                return (T) getNotificationService();
+            }
+            if (serviceInterface == PluginMetricsService.class) {
+                return (T) getMetricsService();
+            }
+            if (serviceInterface == PluginPermissionService.class) {
+                return (T) getPermissionService();
+            }
+            if (serviceInterface == PluginAsyncTaskExecutor.class) {
+                return (T) getAsyncTaskExecutor();
+            }
+            if (serviceInterface == PluginConfigurationValidator.class) {
+                return (T) getConfigurationValidator();
+            }
+            if (serviceInterface == PluginHookService.class) {
+                return (T) getHookService();
+            }
+            if (serviceInterface == PluginDataStore.class) {
+                return (T) getDataStore();
+            }
+            if (serviceInterface == PluginResourceManager.class) {
+                return (T) getResourceManager();
+            }
+            if (serviceInterface == PluginDependencyResolver.class) {
+                return (T) getDependencyResolver();
+            }
+            if (serviceInterface == PluginUpdateService.class) {
+                return (T) getUpdateService();
+            }
+            if (serviceInterface == PluginMonitoringService.class) {
+                return (T) getMonitoringService();
+            }
             return null;
         }
 
         @Override
         public <T> void registerService(Class<T> serviceInterface, T implementation) {
-            log.debug("Service registration not supported in stub implementation");
+            registeredServices.put(serviceInterface, implementation);
+            if (log.isDebugEnabled()) {
+                log.debug("Service registered in stub locator: {}", serviceInterface.getName());
+            }
         }
     }
 

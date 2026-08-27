@@ -143,6 +143,12 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         }
 
         List<String> pluginRoleList = pluginRoles.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>());
+        if (pluginRoleList.contains(roleId)) {
+            if (log.isDebugEnabled()) {
+                log.debug("Role '{}' already assigned to plugin '{}'", roleId, pluginId);
+            }
+            return false;
+        }
         boolean assigned = pluginRoleList.add(roleId);
 
         if (assigned) {

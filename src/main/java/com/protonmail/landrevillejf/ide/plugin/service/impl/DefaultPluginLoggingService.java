@@ -63,14 +63,10 @@ public final class DefaultPluginLoggingService implements PluginLoggingService {
         // Console output
         if (consoleOutput.getOrDefault(pluginId, true)) {
             String formatted = formatEntry(entry);
-            switch (level) {
-                case ERROR:
-                case FATAL:
-                    System.err.println(formatted);
-                    break;
-                default:
-                    System.out.println(formatted);
-                    break;
+            if (level == LogLevel.ERROR || level == LogLevel.FATAL) {
+                System.err.println(formatted);
+            } else {
+                System.out.println(formatted);
             }
         }
 
@@ -86,42 +82,31 @@ public final class DefaultPluginLoggingService implements PluginLoggingService {
 
         // Also log through SLF4J
         String slf4jMessage = formatMessage(pluginId, message);
-        switch (level) {
-            case TRACE:
-                if (log.isTraceEnabled()) {
-                    log.trace(slf4jMessage);
+        if (level == LogLevel.TRACE) {
+            if (log.isTraceEnabled()) {
+                log.trace(slf4jMessage);
+            }
+        } else if (level == LogLevel.DEBUG) {
+            if (log.isDebugEnabled()) {
+                log.debug(slf4jMessage);
+            }
+        } else if (level == LogLevel.INFO) {
+            if (log.isInfoEnabled()) {
+                log.info(slf4jMessage);
+            }
+        } else if (level == LogLevel.WARN) {
+            if (log.isWarnEnabled()) {
+                log.warn(slf4jMessage);
+            }
+        } else {
+            // ERROR and FATAL
+            if (log.isErrorEnabled()) {
+                if (cause != null) {
+                    log.error(slf4jMessage, cause);
+                } else {
+                    log.error(slf4jMessage);
                 }
-                break;
-            case DEBUG:
-                if (log.isDebugEnabled()) {
-                    log.debug(slf4jMessage);
-                }
-                break;
-            case INFO:
-                if (log.isInfoEnabled()) {
-                    log.info(slf4jMessage);
-                }
-                break;
-            case WARN:
-                if (log.isWarnEnabled()) {
-                    log.warn(slf4jMessage);
-                }
-                break;
-            case ERROR:
-            case FATAL:
-                if (log.isErrorEnabled()) {
-                    if (cause != null) {
-                        log.error(slf4jMessage, cause);
-                    } else {
-                        log.error(slf4jMessage);
-                    }
-                }
-                break;
-            default:
-                if (log.isInfoEnabled()) {
-                    log.info(slf4jMessage);
-                }
-                break;
+            }
         }
     }
 
@@ -175,18 +160,15 @@ public final class DefaultPluginLoggingService implements PluginLoggingService {
             return;
         }
 
-        PrintWriter writer = null;
         try {
             String path = (filePath != null) ? filePath : "logs/" + pluginId + ".log";
             File logFile = new File(path);
             File parentDir = logFile.getParentFile();
-            if (parentDir != null && !parentDir.exists()) {
-                boolean created = parentDir.mkdirs();
-                if (!created && log.isWarnEnabled()) {
-                    log.warn("Failed to create directory: {}", parentDir);
-                }
+            if (parentDir != null && !parentDir.exists()
+                    && !parentDir.mkdirs() && log.isWarnEnabled()) {
+                log.warn("Failed to create directory: {}", parentDir);
             }
-            writer = new PrintWriter(new FileWriter(logFile, true));
+            PrintWriter writer = new PrintWriter(new FileWriter(logFile, true));
             fileWriters.put(pluginId, writer);
             if (log.isDebugEnabled()) {
                 log.debug("Enabled file output for plugin {} at {}", pluginId, path);
@@ -194,10 +176,6 @@ public final class DefaultPluginLoggingService implements PluginLoggingService {
         } catch (Exception e) {
             if (log.isErrorEnabled()) {
                 log.error("Failed to set file output for plugin {}", pluginId, e);
-            }
-            // Close the writer if it was created but put failed
-            if (writer != null) {
-                writer.close();
             }
         }
     }
@@ -250,9 +228,7 @@ public final class DefaultPluginLoggingService implements PluginLoggingService {
 
     private void closeAllWriters() {
         for (PrintWriter writer : fileWriters.values()) {
-            if (writer != null) {
-                writer.close();
-            }
+            writer.close();
         }
         fileWriters.clear();
     }

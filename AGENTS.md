@@ -146,3 +146,7 @@ Do not rely on these behaviors; they are scheduled fixes:
 - Keep commits focused; message style: imperative, optionally conventional-commit
   prefixed (`fix:`, `feat:`, `docs:`, `chore:`).
 - Never commit build outputs (`build/`, `target/`, `.gradle/`), IDE files, or secrets.
+
+## 11. Follow best practices
+-100% code coverage with Jacoco
+-0 surviving mutation with Pitest
