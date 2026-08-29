@@ -148,5 +148,11 @@ Do not rely on these behaviors; they are scheduled fixes:
 - Never commit build outputs (`build/`, `target/`, `.gradle/`), IDE files, or secrets.
 
 ## 11. Follow best practices
--100% code coverage with Jacoco
--0 surviving mutation with Pitest
+-100% code coverage with Jacoco this is mandatory
+-0 surviving mutation with Pitest (this is mandatory too)
+-proper commit messages
+-respect checkstyle
+
+## 12. There's a backend spring boot `market-place` that sells plugins , install update, the url is at http://localhost:8080/api/plugins
+- in the future the marketplace will be deployed to AWS
+- The plugin-api should not need to know about the marketplace
