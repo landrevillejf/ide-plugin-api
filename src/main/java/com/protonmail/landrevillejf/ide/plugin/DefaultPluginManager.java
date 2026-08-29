@@ -713,7 +713,8 @@ public final class DefaultPluginManager implements PluginManager {
     private String findPluginClassName(JarFile jarFile) throws Exception {
         JarEntry entry = jarFile.getJarEntry(PLUGIN_PROPERTIES);
         if (entry != null) {
-            try (InputStream is = jarFile.getInputStream(entry)) {
+            try {
+                InputStream is = jarFile.getInputStream(entry);
                 Properties properties = new Properties();
                 properties.load(is);
                 String className = properties.getProperty(PLUGIN_CLASS_ATTRIBUTE);
