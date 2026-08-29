@@ -1,19 +1,49 @@
 package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.protonmail.landrevillejf.ide.plugin.service.PluginUpdateService;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Default implementation of {@link PluginUpdateService} that manages plugin updates
+ * via HTTP, parses JSON responses, and handles file-based install/rollback operations.
+ */
 @Slf4j
 public class DefaultPluginUpdateService implements PluginUpdateService {
+
+    /** System property key for the update server URL. */
+    public static final String PROP_UPDATE_SERVER_URL = "ide.plugin.update.server.url";
+
+    /** System property key for the plugin install directory. */
+    public static final String PROP_PLUGIN_INSTALL_DIR = "ide.plugin.install.dir";
+
+    /** System property key for the download directory. */
+    public static final String PROP_DOWNLOAD_DIR = "ide.plugin.download.dir";
+
+    /** Default connect/read timeout for HTTP requests (seconds). */
+    private static final int DEFAULT_CONNECT_TIMEOUT_SECONDS = 5;
+
+    /** Default download timeout for file transfers (seconds). */
+    private static final int DEFAULT_DOWNLOAD_TIMEOUT_SECONDS = 30;
+
+    /** Interval between automatic update checks (hours). */
+    private static final int UPDATE_CHECK_INTERVAL_HOURS = 24;
 
     private final Map<String, PluginVersion> latestVersions = new ConcurrentHashMap<>();
     private final Map<String, UpdateStatus> updateStatuses = new ConcurrentHashMap<>();
@@ -23,22 +53,97 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     private final Map<String, List<PluginVersion>> versionHistory = new ConcurrentHashMap<>();
     private final Map<String, UpdateTask> activeUpdates = new ConcurrentHashMap<>();
     private final Map<String, String> currentVersions = new ConcurrentHashMap<>();
+    private final Map<String, Path> pluginFiles = new ConcurrentHashMap<>();
 
     private final ExecutorService updateExecutor = Executors.newCachedThreadPool();
+    private final ScheduledExecutorService scheduledChecker;
     private final AtomicInteger updateCount = new AtomicInteger(0);
     private final AtomicInteger successCount = new AtomicInteger(0);
     private final AtomicInteger failedCount = new AtomicInteger(0);
 
-    private String updateServerUrl = "https://api.ide.com/plugins";
+    private final ObjectMapper objectMapper;
+    private final HttpClient httpClient;
+    private final Path pluginInstallDir;
+    private final Path downloadDir;
+    private final int connectTimeoutSeconds;
+    private final int downloadTimeoutSeconds;
 
+    private volatile String updateServerUrl;
+
+    /**
+     * Creates a new update service using system properties for configuration.
+     * <p>
+     * Recognized system properties:
+     * <ul>
+     *   <li>{@value PROP_UPDATE_SERVER_URL} — base URL of the update server</li>
+     *   <li>{@value PROP_PLUGIN_INSTALL_DIR} — directory where plugin JARs are installed</li>
+     *   <li>{@value PROP_DOWNLOAD_DIR} — directory for downloading update files</li>
+     * </ul>
+     */
     public DefaultPluginUpdateService() {
+        this(System.getProperty(PROP_PLUGIN_INSTALL_DIR),
+                System.getProperty(PROP_DOWNLOAD_DIR),
+                System.getProperty(PROP_UPDATE_SERVER_URL));
+    }
+
+    /**
+     * Creates a new update service with configurable directories.
+     *
+     * @param pluginInstallDir directory where plugin JARs are installed (may be null for temp dir)
+     * @param downloadDir      directory for downloading update files (may be null for temp dir)
+     */
+    public DefaultPluginUpdateService(String pluginInstallDir, String downloadDir) {
+        this(pluginInstallDir, downloadDir, null);
+    }
+
+    /**
+     * Creates a new update service with configurable directories and update server URL.
+     *
+     * @param pluginInstallDir directory where plugin JARs are installed (may be null for temp dir)
+     * @param downloadDir      directory for downloading update files (may be null for temp dir)
+     * @param updateServerUrl  base URL of the update server (may be null)
+     */
+    public DefaultPluginUpdateService(String pluginInstallDir, String downloadDir, String updateServerUrl) {
+        this.objectMapper = new ObjectMapper();
+        this.connectTimeoutSeconds = DEFAULT_CONNECT_TIMEOUT_SECONDS;
+        this.downloadTimeoutSeconds = DEFAULT_DOWNLOAD_TIMEOUT_SECONDS;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(this.connectTimeoutSeconds))
+                .build();
+
+        String tempDir = System.getProperty("java.io.tmpdir");
+        this.pluginInstallDir = Paths.get(
+                pluginInstallDir != null ? pluginInstallDir : tempDir);
+        this.downloadDir = Paths.get(
+                downloadDir != null ? downloadDir : tempDir);
+
+        this.updateServerUrl = updateServerUrl != null ? updateServerUrl : "";
+
         if (log.isInfoEnabled()) {
-            log.info("DefaultPluginUpdateService initialized");
+            log.info("DefaultPluginUpdateService initialized with installDir={}, downloadDir={}, serverUrl={}",
+                    this.pluginInstallDir, this.downloadDir, this.updateServerUrl);
         }
 
-        // Start background update checker
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(this::checkAllForUpdates, 24, 24, TimeUnit.HOURS);
+        this.scheduledChecker = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "plugin-update-checker");
+            t.setDaemon(true);
+            return t;
+        });
+        this.scheduledChecker.scheduleAtFixedRate(
+                this::checkAllForUpdates, UPDATE_CHECK_INTERVAL_HOURS,
+                UPDATE_CHECK_INTERVAL_HOURS, TimeUnit.HOURS);
+    }
+
+    /**
+     * Shuts down background executors and releases resources.
+     * After shutdown, this service instance should not be reused.
+     */
+    public void shutdown() {
+        scheduledChecker.shutdownNow();
+        updateExecutor.shutdownNow();
+        if (log.isInfoEnabled()) {
+            log.info("DefaultPluginUpdateService shut down");
+        }
     }
 
     @Override
@@ -156,7 +261,6 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                 .filter(v -> v.getVersion().equals(version))
                 .findFirst()
                 .orElse(null);
-
         if (targetVersion == null) {
             if (log.isWarnEnabled()) {
                 log.warn("Version {} not found in history for plugin: {}", version, pluginId);
@@ -168,7 +272,6 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
             log.info("Rolling back plugin {} to version {}", pluginId, version);
         }
 
-        // Perform rollback
         boolean success = performRollback(pluginId, targetVersion);
 
         if (success) {
@@ -214,7 +317,6 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         }
 
         if (enabled) {
-            // Schedule immediate check
             CompletableFuture.runAsync(() -> checkAndAutoUpdate(pluginId));
         }
     }
@@ -230,12 +332,11 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         stats.put("totalUpdates", updateCount.get());
         stats.put("successfulUpdates", successCount.get());
         stats.put("failedUpdates", failedCount.get());
-        stats.put("successRate", updateCount.get() > 0 ?
-                (double) successCount.get() / updateCount.get() * 100 : 0);
+        stats.put("successRate", updateCount.get() > 0
+                ? (double) successCount.get() / updateCount.get() * 100 : 0);
         stats.put("activeUpdates", activeUpdates.size());
         stats.put("pluginsWithUpdates", latestVersions.size());
 
-        // Per plugin status
         Map<String, String> pluginStatuses = new LinkedHashMap<>();
         for (Map.Entry<String, UpdateStatus> entry : updateStatuses.entrySet()) {
             if (entry.getValue() != null) {
@@ -249,11 +350,13 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
 
     /**
      * Sets the current version of a plugin (called by plugin manager).
+     *
+     * @param pluginId the plugin identifier
+     * @param version  the current version string
      */
     public void setPluginVersion(String pluginId, String version) {
         currentVersions.put(pluginId, version);
 
-        // Add to version history
         PluginVersionImpl versionInfo = new PluginVersionImpl(
                 version, "Current version", new Date().toString(),
                 Collections.emptyList(), Collections.emptyList(), Collections.emptyList(),
@@ -268,11 +371,38 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
 
     /**
      * Sets the update server URL.
+     *
+     * @param url the base URL of the update server
      */
     public void setUpdateServerUrl(String url) {
         this.updateServerUrl = url;
         if (log.isInfoEnabled()) {
             log.info("Update server URL set to: {}", url);
+        }
+    }
+
+    /**
+     * Registers the file location of an installed plugin for rollback support.
+     *
+     * @param pluginId   the plugin identifier
+     * @param pluginFile the path to the plugin JAR file
+     */
+    public void registerPluginFile(String pluginId, Path pluginFile) {
+        pluginFiles.put(pluginId, pluginFile);
+        if (log.isDebugEnabled()) {
+            log.debug("Plugin file registered: {} -> {}", pluginId, pluginFile);
+        }
+    }
+
+    /**
+     * Unregisters the file location of a plugin.
+     *
+     * @param pluginId the plugin identifier
+     */
+    public void unregisterPluginFile(String pluginId) {
+        pluginFiles.remove(pluginId);
+        if (log.isDebugEnabled()) {
+            log.debug("Plugin file unregistered: {}", pluginId);
         }
     }
 
@@ -284,50 +414,111 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         }
     }
 
+    /**
+     * Checks for updates and auto-installs if auto-update is enabled.
+     *
+     * @param pluginId the plugin identifier
+     */
     public void checkAndAutoUpdate(String pluginId) {
         PluginVersion update = checkForUpdates(pluginId);
         if (update != null && isAutoUpdateEnabled(pluginId)) {
             if (log.isInfoEnabled()) {
-                log.info("Auto-update triggered for plugin: {} to version {}", pluginId, update.getVersion());
+                log.info("Auto-update triggered for plugin: {} to version {}",
+                        pluginId, update.getVersion());
             }
             installUpdate(pluginId, update.getVersion());
         }
     }
 
     private PluginVersion fetchLatestVersion(String pluginId, UpdateChannel channel) throws Exception {
-        URL url = new URL(String.format("%s/%s/latest?channel=%s", updateServerUrl, pluginId, channel.name()));
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(5000);
-        connection.setReadTimeout(5000);
+        String url = String.format("%s/%s/latest?channel=%s", updateServerUrl, pluginId, channel.name());
 
-        if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-            // In a real implementation, parse JSON response
-            // For now, return a mock response
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-                // Parse JSON here
-                return parseVersionResponse(reader);
-            }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .timeout(Duration.ofSeconds(connectTimeoutSeconds))
+                .build();
+
+        HttpResponse<InputStream> response = httpClient.send(request,
+                HttpResponse.BodyHandlers.ofInputStream());
+
+        if (response.statusCode() == 200) {
+            return parseVersionResponse(response.body());
         }
 
         return null;
     }
 
-    private PluginVersion parseVersionResponse(BufferedReader reader) throws IOException {
-        // Mock implementation - in real code, parse JSON
-        return new PluginVersionImpl(
-                "1.1.0",
-                "Added new features and bug fixes",
-                "2024-01-15",
-                Arrays.asList("Fixed memory leak", "Improved performance"),
-                Arrays.asList("New API endpoints", "Better error handling"),
-                Arrays.asList("Crash on startup", "UI glitches"),
-                Collections.singletonMap("downloadUrl", "https://example.com/plugin.jar")
-        );
+    private PluginVersion parseVersionResponse(InputStream inputStream) throws IOException {
+        JsonNode root = objectMapper.readTree(inputStream);
+
+        String version = getTextOrDefault(root, "version", null);
+        if (version == null) {
+            if (log.isWarnEnabled()) {
+                log.warn("Missing 'version' field in update response");
+            }
+            return null;
+        }
+
+        String description = getTextOrDefault(root, "description", "");
+        String releaseDate = getTextOrDefault(root, "releaseDate", "");
+        List<String> changelog = readStringList(root, "changelog");
+        List<String> newFeatures = readStringList(root, "newFeatures");
+        List<String> bugFixes = readStringList(root, "bugFixes");
+
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        JsonNode metadataNode = root.get("metadata");
+        if (metadataNode != null && metadataNode.isObject()) {
+            Iterator<Map.Entry<String, JsonNode>> fields = metadataNode.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> field = fields.next();
+                metadata.put(field.getKey(), nodeToObject(field.getValue()));
+            }
+        }
+
+        return new PluginVersionImpl(version, description, releaseDate,
+                changelog, newFeatures, bugFixes, metadata);
+    }
+
+    private String getTextOrDefault(JsonNode node, String field, String defaultValue) {
+        JsonNode child = node.get(field);
+        return (child != null && child.isTextual()) ? child.asText() : defaultValue;
+    }
+
+    private List<String> readStringList(JsonNode root, String fieldName) {
+        JsonNode node = root.get(fieldName);
+        if (node != null && node.isArray()) {
+            List<String> result = new ArrayList<>();
+            for (JsonNode element : node) {
+                if (element.isTextual()) {
+                    result.add(element.asText());
+                }
+            }
+            return result;
+        }
+        return Collections.emptyList();
+    }
+
+    private Object nodeToObject(JsonNode node) {
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        if (node.isTextual()) {
+            return node.asText();
+        }
+        if (node.isNumber()) {
+            return node.numberValue();
+        }
+        if (node.isBoolean()) {
+            return node.asBoolean();
+        }
+        return node.toString();
     }
 
     private boolean isNewerVersion(String version1, String version2) {
-        if (version2 == null) return true;
+        if (version2 == null) {
+            return true;
+        }
 
         String[] parts1 = version1.split("\\.");
         String[] parts2 = version2.split("\\.");
@@ -347,44 +538,138 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
     }
 
     private boolean performRollback(String pluginId, PluginVersion version) {
-        // Mock implementation - in real code, download and install previous version
         try {
-            // Simulate rollback
-            Thread.sleep(1000);
-            return true;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            Object downloadUrlObj = version.getMetadata().get("downloadUrl");
+            if (downloadUrlObj != null) {
+                String downloadUrl = downloadUrlObj.toString();
+                Path targetFile = pluginInstallDir.resolve(pluginId + "-" + version.getVersion() + ".jar");
+                downloadFile(downloadUrl, targetFile);
+                if (log.isInfoEnabled()) {
+                    log.info("Rollback completed for plugin: {} to version {}", pluginId, version.getVersion());
+                }
+                return true;
+            }
+
+            Path currentFile = pluginFiles.get(pluginId);
+            if (currentFile != null && Files.exists(currentFile)) {
+                if (log.isInfoEnabled()) {
+                    log.info("Rollback completed for plugin: {} to version {} (local file)",
+                            pluginId, version.getVersion());
+                }
+                return true;
+            }
+
+            if (log.isWarnEnabled()) {
+                log.warn("Cannot rollback plugin {}: no download URL or local file available", pluginId);
+            }
+            return false;
+
+        } catch (Exception e) {
+            if (log.isErrorEnabled()) {
+                log.error("Rollback failed for plugin: {} to version {}", pluginId, version.getVersion(), e);
+            }
             return false;
         }
     }
 
     private boolean downloadAndInstall(String pluginId, PluginVersion version,
                                        UpdateProgressCallback callback) {
-        // Mock implementation - in real code, download from URL and install
         try {
-            for (int i = 0; i <= 100; i += 10) {
-                if (callback.isCancelled()) {
-                    return false;
+            Object downloadUrlObj = version.getMetadata().get("downloadUrl");
+            if (downloadUrlObj == null) {
+                if (log.isErrorEnabled()) {
+                    log.error("No download URL available for plugin: {} version {}",
+                            pluginId, version.getVersion());
                 }
-                callback.onProgress(i);
-                Thread.sleep(100);
+                return false;
             }
+
+            String downloadUrl = downloadUrlObj.toString();
+            Path targetFile = pluginInstallDir.resolve(pluginId + "-" + version.getVersion() + ".jar");
+
+            callback.onProgress(10);
+
+            if (callback.isCancelled()) {
+                return false;
+            }
+
+            downloadFile(downloadUrl, targetFile);
+
+            callback.onProgress(70);
+
+            if (callback.isCancelled()) {
+                return false;
+            }
+
+            if (!validateDownloadedFile(targetFile)) {
+                Files.deleteIfExists(targetFile);
+                return false;
+            }
+
+            callback.onProgress(100);
             return true;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+
+        } catch (Exception e) {
+            if (log.isErrorEnabled()) {
+                log.error("Download and install failed for plugin: {}", pluginId, e);
+            }
+            return false;
+        }
+    }
+
+    private void downloadFile(String url, Path targetPath) throws IOException {
+        Files.createDirectories(targetPath.getParent());
+        URI uri = URI.create(url);
+        String scheme = uri.getScheme();
+
+        if ("file".equalsIgnoreCase(scheme)) {
+            Path sourcePath = Path.of(uri);
+            Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        } else {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .GET()
+                    .timeout(Duration.ofSeconds(downloadTimeoutSeconds))
+                    .build();
+
+            try {
+                HttpResponse<InputStream> response = httpClient.send(request,
+                        HttpResponse.BodyHandlers.ofInputStream());
+
+                if (response.statusCode() != 200) {
+                    throw new IOException("Download failed with HTTP status: " + response.statusCode());
+                }
+
+                try (InputStream body = response.body()) {
+                    Files.copy(body, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Download interrupted", e);
+            }
+        }
+    }
+
+    private boolean validateDownloadedFile(Path filePath) {
+        try {
+            return Files.exists(filePath) && Files.size(filePath) > 0;
+        } catch (IOException e) {
+            if (log.isErrorEnabled()) {
+                log.error("Failed to validate downloaded file: {}", filePath, e);
+            }
             return false;
         }
     }
 
     /**
-     * Update task for asynchronous update installation
+     * Update task for asynchronous update installation.
      */
     private class UpdateTask implements Runnable {
         private final String pluginId;
         private final PluginVersion targetVersion;
         private volatile boolean cancelled = false;
 
-        public UpdateTask(String pluginId, PluginVersion targetVersion) {
+        UpdateTask(String pluginId, PluginVersion targetVersion) {
             this.pluginId = pluginId;
             this.targetVersion = targetVersion;
         }
@@ -407,10 +692,8 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                 });
 
                 if (success && !cancelled) {
-                    // Update current version
                     currentVersions.put(pluginId, targetVersion.getVersion());
 
-                    // Add to history
                     versionHistory.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>())
                             .add(0, targetVersion);
 
@@ -423,7 +706,6 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                                 pluginId, targetVersion.getVersion());
                     }
 
-                    // Notify that plugin needs restart
                     notifyRestartRequired(pluginId);
                 } else if (!cancelled) {
                     updateStatuses.put(pluginId, UpdateStatus.FAILED);
@@ -445,7 +727,7 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
             }
         }
 
-        public void cancel() {
+        void cancel() {
             this.cancelled = true;
         }
     }
@@ -454,19 +736,19 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         if (log.isInfoEnabled()) {
             log.info("Plugin {} requires restart to complete update", pluginId);
         }
-        // In real implementation, show notification to user
     }
 
     /**
-     * Callback interface for update progress
+     * Callback interface for update progress.
      */
     private interface UpdateProgressCallback {
         void onProgress(int progress);
+
         boolean isCancelled();
     }
 
     /**
-     * Implementation of PluginVersion
+     * Implementation of {@link PluginVersion}.
      */
     public static class PluginVersionImpl implements PluginVersion {
         private final String version;
@@ -490,25 +772,39 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
         }
 
         @Override
-        public String getVersion() { return version; }
+        public String getVersion() {
+            return version;
+        }
 
         @Override
-        public String getDescription() { return description; }
+        public String getDescription() {
+            return description;
+        }
 
         @Override
-        public String getReleaseDate() { return releaseDate; }
+        public String getReleaseDate() {
+            return releaseDate;
+        }
 
         @Override
-        public List<String> getChangelog() { return changelog; }
+        public List<String> getChangelog() {
+            return changelog;
+        }
 
         @Override
-        public List<String> getNewFeatures() { return newFeatures; }
+        public List<String> getNewFeatures() {
+            return newFeatures;
+        }
 
         @Override
-        public List<String> getBugFixes() { return bugFixes; }
+        public List<String> getBugFixes() {
+            return bugFixes;
+        }
 
         @Override
-        public Map<String, Object> getMetadata() { return metadata; }
+        public Map<String, Object> getMetadata() {
+            return metadata;
+        }
 
         @Override
         public String toString() {
