@@ -3,10 +3,16 @@
         "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
         "https://checkstyle.org/dtds/suppressions_1_2.dtd">
 <suppressions>
-    <!-- Suppress checks for Lombok-generated code -->
-    <suppress checks=".*" files=".*[/\\]lombok[/\\].*"/>
-    <suppress checks=".*" files=".*\.lombok\..*"/>
+    <!-- Suppress checks for test classes -->
+    <suppress checks="Javadoc" files=".*Test\.java" />
+    <suppress checks="Javadoc" files=".*CoverageTest\.java" />
+    <suppress checks="HideUtilityClassConstructor" files=".*Test\.java" />
 
-    <!-- Example: Suppress Javadoc for test classes -->
-    <suppress checks="Javadoc" files=".*Test\.java"/>
+    <!-- Suppress checks for BDD/Cucumber/Karate test infrastructure -->
+    <suppress checks="Javadoc" files=".*[/\\]bdd[/\\].*" />
+    <suppress checks="Javadoc" files=".*[/\\]cucumber[/\\].*" />
+    <suppress checks="Javadoc" files=".*[/\\]karate[/\\].*" />
+
+    <!-- Suppress checks for mock classes -->
+    <suppress checks=".*" files=".*[/\\]mock[/\\].*" />
 </suppressions>
