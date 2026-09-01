@@ -12,6 +12,18 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginMonitoringService}.
+ * <p>
+ * Provides real-time health monitoring using JMX MXBeans for CPU, memory, and thread tracking.
+ * Includes alerting with severity levels, health report generation, and periodic health updates.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginMonitoringService
+ */
 @Slf4j
 public class DefaultPluginMonitoringService implements PluginMonitoringService {
 
@@ -392,7 +404,8 @@ public class DefaultPluginMonitoringService implements PluginMonitoringService {
                 } else if (newStatus == HealthStatus.CRITICAL) {
                     createAlert(monitor.pluginId, AlertSeverity.CRITICAL, "Health Critical",
                             "Plugin health is critical, immediate attention required");
-                } else if (newStatus == HealthStatus.HEALTHY) {
+                } else {
+                    // HEALTHY is the only remaining status a transition can produce
                     createAlert(monitor.pluginId, AlertSeverity.INFO, "Health Restored",
                             "Plugin health has been restored");
                 }

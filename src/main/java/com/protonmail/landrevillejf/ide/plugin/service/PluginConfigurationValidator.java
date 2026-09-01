@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Configuration validation and schema management service for plugins.
+ * <p>
+ * Provides schema registration, custom validators, default configuration
+ * generation, and configuration merging capabilities.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginConfigurationValidator {
 

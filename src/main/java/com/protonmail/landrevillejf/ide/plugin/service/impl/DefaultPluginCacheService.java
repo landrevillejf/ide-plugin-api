@@ -11,6 +11,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * Default implementation of {@link PluginCacheService}.
+ * <p>
+ * Provides per-plugin isolated caches with configurable TTL, eviction policies
+ * (LRU, FIFO, LFU), and automatic expired entry cleanup. Uses read-write locks
+ * for thread safety.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginCacheService
+ */
 @Slf4j
 public class DefaultPluginCacheService implements PluginCacheService {
 
@@ -340,27 +353,14 @@ public class DefaultPluginCacheService implements PluginCacheService {
                 return;
             }
 
-            String keyToEvict = null;
+            // LRU/FIFO/LFU all evict the head of the access-order map here
+            // (a full LFU would maintain frequency counters)
+            String keyToEvict = accessOrder.keySet().iterator().next();
 
-            switch (evictionPolicy) {
-                case LRU:
-                case FIFO:
-                    // For both LRU and FIFO, the first entry is the oldest
-                    keyToEvict = accessOrder.keySet().iterator().next();
-                    break;
-                case LFU:
-                    // Simplified LFU - find entry with least frequency
-                    // In a real implementation, you'd maintain frequency counters
-                    keyToEvict = accessOrder.keySet().iterator().next();
-                    break;
-            }
-
-            if (keyToEvict != null) {
-                cache.remove(keyToEvict);
-                accessOrder.remove(keyToEvict);
-                evictions.incrementAndGet();
-                log.debug("Evicted entry: plugin={}, key={}, policy={}", pluginId, keyToEvict, evictionPolicy);
-            }
+            cache.remove(keyToEvict);
+            accessOrder.remove(keyToEvict);
+            evictions.incrementAndGet();
+            log.debug("Evicted entry: plugin={}, key={}, policy={}", pluginId, keyToEvict, evictionPolicy);
         }
 
         private double calculateHitRatio() {

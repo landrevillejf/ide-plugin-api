@@ -1,5 +1,17 @@
 package com.protonmail.landrevillejf.ide.plugin;
 
+/**
+ * Enumeration representing the various states a plugin can be in during its lifecycle.
+ * <p>
+ * This enum defines all possible states for a plugin, from unloaded to shutdown,
+ * including intermediate states during transitions. Each state has rules for
+ * valid transitions to other states.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public enum PluginStatus {
     UNLOADED("Unloaded", false, false),       // Pas encore chargé
     LOADED("Loaded", false, false),           // Chargé mais non initialisé
@@ -17,6 +29,13 @@ public enum PluginStatus {
     private final boolean active;
     private final boolean inactive;
 
+    /**
+     * Creates a new plugin status.
+     *
+     * @param displayName the human-readable display name
+     * @param active whether this status represents an active state
+     * @param inactive whether this status represents an inactive state
+     */
     PluginStatus(String displayName, boolean active, boolean inactive) {
         this.displayName = displayName;
         this.active = active;
@@ -98,23 +117,25 @@ public enum PluginStatus {
                     newState == DISABLING ||
                     newState == SHUTTING_DOWN;
 
-            case ENABLING -> newState == ENABLED ||
-                    newState == ERROR;
+            case ENABLING -> newState == ENABLED;
 
-            case DISABLING -> newState == DISABLED ||
-                    newState == ERROR;
+            case DISABLING -> newState == DISABLED;
 
-            case SHUTTING_DOWN -> newState == SHUTDOWN ||
-                    newState == ERROR;
+            case SHUTTING_DOWN -> newState == SHUTDOWN;
 
             case RELOADING -> newState == LOADED;
 
-            case SHUTDOWN -> false;
-
+            // SHUTDOWN is a terminal state: no further transitions allowed
             default -> false;
         };
     }
 
+    /**
+     * Checks if a transition to ERROR state is valid from the current state.
+     *
+     * @param newState the target state
+     * @return {@code true} if transition to ERROR is valid, {@code false} otherwise
+     */
     private boolean canTransitionToError(PluginStatus newState) {
         return newState == ERROR && switch (this) {
             case ENABLED, DISABLED, INITIALIZED, LOADED, ENABLING, DISABLING, SHUTTING_DOWN -> true;

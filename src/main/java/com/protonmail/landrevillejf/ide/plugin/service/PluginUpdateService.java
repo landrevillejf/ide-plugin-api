@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Plugin update and versioning management service.
+ * <p>
+ * Provides update checking, installation, rollback, and version history management
+ * with support for multiple update channels (stable, beta, development).
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginUpdateService {
 

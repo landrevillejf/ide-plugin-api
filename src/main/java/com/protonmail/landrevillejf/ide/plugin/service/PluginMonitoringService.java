@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Global plugin monitoring and analytics service.
+ * <p>
+ * Provides health reporting, resource usage tracking (CPU, memory, threads),
+ * alerting, and comprehensive monitoring across all loaded plugins.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginMonitoringService {
 

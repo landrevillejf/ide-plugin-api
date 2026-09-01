@@ -1,6 +1,7 @@
 package com.protonmail.landrevillejf.ide.plugin;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Date;
@@ -601,5 +602,51 @@ class PluginDescriptorTest {
 
         assertDoesNotThrow(empty::toString);
         assertNotNull(empty.toString());
+    }
+
+    // ── Additional tests to cover missed branches ──────────────────────────
+
+    @Test
+    @DisplayName("getSummary truncates description longer than 50 chars")
+    void testGetSummary_LongDescription_Truncated() {
+        fullDescriptor = new PluginDescriptor("id", "Plugin", "1.0",
+                "com.Main", "This description is definitely longer than fifty characters in total",
+                "Author");
+        String summary = fullDescriptor.getSummary();
+        assertNotNull(summary);
+        assertTrue(summary.contains("..."), "Expected truncation '...'");
+    }
+
+    @Test
+    @DisplayName("getSummary with description <= 50 chars is not truncated")
+    void testGetSummary_ShortDescription_NotTruncated() {
+        fullDescriptor = new PluginDescriptor("id", "Plugin", "1.0",
+                "com.Main", "Short desc", "Author");
+        String summary = fullDescriptor.getSummary();
+        assertTrue(summary.contains("Short desc"));
+        assertFalse(summary.contains("..."));
+    }
+
+    @Test
+    @DisplayName("isCompatibleWith covers compareVersions padding branch")
+    void testIsCompatibleWith_DifferentVersionLengths() {
+        // requiredHostVersion = "1.5.0" (3 parts), hostVersion = "1.5.0.1" (4 parts)
+        // At i=3: part2 is padded to 0. covers the ternary false branch.
+        fullDescriptor.setRequiredHostVersion("1.5.0");
+        assertTrue(fullDescriptor.isCompatibleWith("1.5.0.1"));
+        // Also cover when requiredHostVersion has more parts: "1.5.0.0" vs "1.5.0"
+        fullDescriptor.setRequiredHostVersion("1.5.0.0");
+        assertTrue(fullDescriptor.isCompatibleWith("1.5.0.0"));
+    }
+
+    @Test
+    @DisplayName("isCompatibleWith pads the host version when it has fewer parts")
+    void testIsCompatibleWith_HostVersionShorterThanRequired() {
+        // requiredHostVersion = "1.5.0" (3 parts), hostVersion = "1.5" (2 parts)
+        // At i=2: part1 is padded to 0, covering the ternary false branch.
+        fullDescriptor.setRequiredHostVersion("1.5.0");
+        assertTrue(fullDescriptor.isCompatibleWith("1.5"));
+        // Host shorter and lower: "1.4" vs "1.5.0" -> incompatible
+        assertFalse(fullDescriptor.isCompatibleWith("1.4"));
     }
 }

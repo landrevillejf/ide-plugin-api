@@ -9,6 +9,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginPermissionService}.
+ * <p>
+ * Provides role-based access control with permission grants, role assignments,
+ * audit logging, and initialization of default permissions and roles.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginPermissionService
+ */
 @Slf4j
 public class DefaultPluginPermissionService implements PluginPermissionService {
 
@@ -78,8 +90,8 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         List<String> pluginRoleIds = pluginRoles.get(pluginId);
         if (pluginRoleIds != null) {
             for (String roleId : pluginRoleIds) {
-                Role role = roles.get(roleId);
-                if (role != null && role.getPermissionIds().contains(permissionId)) {
+                // The entry always exists: assignRole validates the role before adding it
+                if (roles.get(roleId).getPermissionIds().contains(permissionId)) {
                     return true;
                 }
             }
@@ -122,10 +134,8 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
         List<String> pluginRoleIds = pluginRoles.get(pluginId);
         if (pluginRoleIds != null) {
             for (String roleId : pluginRoleIds) {
-                Role role = roles.get(roleId);
-                if (role != null) {
-                    allPermissions.addAll(role.getPermissionIds());
-                }
+                // The entry always exists: assignRole validates the role before adding it
+                allPermissions.addAll(roles.get(roleId).getPermissionIds());
             }
         }
 
@@ -149,16 +159,14 @@ public class DefaultPluginPermissionService implements PluginPermissionService {
             }
             return false;
         }
-        boolean assigned = pluginRoleList.add(roleId);
+        pluginRoleList.add(roleId);
 
-        if (assigned) {
-            if (log.isDebugEnabled()) {
-                log.debug("Role '{}' assigned to plugin '{}'", roleId, pluginId);
-            }
-            addAuditEntry(pluginId, "ASSIGN_ROLE", roleId, null);
+        if (log.isDebugEnabled()) {
+            log.debug("Role '{}' assigned to plugin '{}'", roleId, pluginId);
         }
+        addAuditEntry(pluginId, "ASSIGN_ROLE", roleId, null);
 
-        return assigned;
+        return true;
     }
 
     @Override

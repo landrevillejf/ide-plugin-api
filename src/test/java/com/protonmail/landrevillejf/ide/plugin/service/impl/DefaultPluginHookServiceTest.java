@@ -1,7 +1,10 @@
 package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
 import com.protonmail.landrevillejf.ide.plugin.service.PluginHookService;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -299,5 +302,74 @@ class DefaultPluginHookServiceTest {
         List<Map<String, Object>> history = hookService.getHookExecutionHistory(TEST_PLUGIN, 10);
         assertFalse(history.isEmpty());
         assertTrue(history.get(0).containsKey("error"));
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should skip all logging when the hook logger is disabled")
+        void shouldCoverLogGuardFalseBranches() throws Exception {
+            TestUtils.withLoggingOffThrowing(DefaultPluginHookService.class, () -> {
+                // Constructor log guard
+                DefaultPluginHookService quietService = new DefaultPluginHookService();
+
+                // registerHookWithPriority and unregisterHook log guards
+                String hookId = quietService.registerHook(TEST_PLUGIN,
+                        PluginHookService.HookType.PRE_ENABLE, context -> {});
+                assertTrue(quietService.unregisterHook(hookId));
+
+                // unregisterHooksByType with an empty list and an unknown plugin
+                assertEquals(0, quietService.unregisterHooksByType(
+                        TEST_PLUGIN, PluginHookService.HookType.PRE_ENABLE));
+                assertEquals(0, quietService.unregisterHooksByType(
+                        "ghost", PluginHookService.HookType.PRE_ENABLE));
+
+                // executeHooks with no hooks registered at all
+                quietService.executeHooks(TEST_PLUGIN, PluginHookService.HookType.PRE_ENABLE, Map.of());
+                quietService.executeHooks("ghost", PluginHookService.HookType.PRE_ENABLE, Map.of());
+
+                // executeHooks with hooks registered but none of the requested type
+                quietService.registerHook(TEST_PLUGIN,
+                        PluginHookService.HookType.POST_ENABLE, context -> {});
+                quietService.executeHooks(TEST_PLUGIN, PluginHookService.HookType.PRE_ENABLE, Map.of());
+
+                // executeHooks: failing hook, cancelling hook, then a skipped hook
+                quietService.registerHook(TEST_PLUGIN, PluginHookService.HookType.PRE_ENABLE,
+                        context -> {
+                            throw new RuntimeException("boom");
+                        });
+                quietService.registerHook(TEST_PLUGIN, PluginHookService.HookType.PRE_ENABLE,
+                        PluginHookService.HookContext::cancel);
+                quietService.registerHook(TEST_PLUGIN, PluginHookService.HookType.PRE_ENABLE,
+                        context -> {});
+                quietService.executeHooks(TEST_PLUGIN, PluginHookService.HookType.PRE_ENABLE, Map.of());
+
+                // executeHook: unknown hook, success and failure guards
+                assertNull(quietService.executeHook("no.such.hook", Map.of()));
+                String singleId = quietService.registerHook(TEST_PLUGIN_2,
+                        PluginHookService.HookType.PRE_ENABLE, context -> context.setResult("ok"));
+                assertEquals("ok", quietService.executeHook(singleId, Map.of()));
+                String failingId = quietService.registerHook(TEST_PLUGIN_2,
+                        PluginHookService.HookType.PRE_ENABLE, context -> {
+                            throw new RuntimeException("boom");
+                        });
+                quietService.executeHook(failingId, Map.of());
+
+                // cancel() on a non-cancellable context (created by executeHook)
+                String cancelId = quietService.registerHook(TEST_PLUGIN_2,
+                        PluginHookService.HookType.PRE_ENABLE,
+                        PluginHookService.HookContext::cancel);
+                quietService.executeHook(cancelId, Map.of());
+
+                // clearHookExecutionHistory log guard (records exist after the executions above)
+                quietService.clearHookExecutionHistory(TEST_PLUGIN);
+
+                // unregisterHooksByType with matching hooks
+                assertEquals(1, quietService.unregisterHooksByType(
+                        TEST_PLUGIN, PluginHookService.HookType.POST_ENABLE));
+            });
+        }
     }
 }

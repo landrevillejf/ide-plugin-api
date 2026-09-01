@@ -14,6 +14,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Default implementation of the PluginContext interface.
+ * <p>
+ * This class provides a concrete implementation of the plugin context,
+ * managing service registration, event bus access, and plugin data directory.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 @Slf4j
 public class DefaultPluginContext implements PluginContext {
     private final ServiceRegistry serviceRegistry;
@@ -35,6 +46,16 @@ public class DefaultPluginContext implements PluginContext {
      */
     private static final ComponentRegistry componentRegistry = new ComponentRegistry();
 
+    /**
+     * Creates a new default plugin context.
+     *
+     * @param serviceRegistry the application service registry
+     * @param pluginEventBus the plugin event bus
+     * @param applicationEventBus the application event bus
+     * @param pluginManager the plugin manager
+     * @param pluginDataDirectory the plugin data directory
+     * @param pluginId the plugin identifier
+     */
     public DefaultPluginContext(ServiceRegistry serviceRegistry,
                                 PluginEventBus pluginEventBus,
                                 EventBus applicationEventBus,
@@ -57,6 +78,17 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * Creates a new default plugin context with a plugin instance.
+     *
+     * @param serviceRegistry the application service registry
+     * @param pluginEventBus the plugin event bus
+     * @param applicationEventBus the application event bus
+     * @param pluginManager the plugin manager
+     * @param pluginDataDirectory the plugin data directory
+     * @param pluginId the plugin identifier
+     * @param plugin the plugin instance
+     */
     public DefaultPluginContext(ServiceRegistry serviceRegistry,
                                 PluginEventBus pluginEventBus,
                                 EventBus applicationEventBus,
@@ -67,20 +99,26 @@ public class DefaultPluginContext implements PluginContext {
         this(serviceRegistry, pluginEventBus, applicationEventBus, pluginManager,
                 pluginDataDirectory, pluginId);
         this.plugin = plugin;
-
-        if (pluginDataDirectory != null && !pluginDataDirectory.exists()) {
-            boolean created = pluginDataDirectory.mkdirs();
-            if (!created && log.isWarnEnabled()) {
-                log.warn("Failed to create plugin data directory: {}", pluginDataDirectory);
-            }
-        }
+        // Directory creation is handled by the delegated 6-arg constructor
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public PluginEventBus getEventBus() {
         return pluginEventBus;
     }
 
+    /**
+     * Returns a service by its class, checking local services first.
+     *
+     * @param <T> the service type
+     * @param serviceClass the class of the service to retrieve
+     * @return the service instance, or {@code null} if not found
+     */
     @Override
     public <T> T getService(Class<T> serviceClass) {
         @SuppressWarnings("unchecked")
@@ -91,6 +129,14 @@ public class DefaultPluginContext implements PluginContext {
         return serviceRegistry.getService(serviceClass);
     }
 
+    /**
+     * Registers a service implementation in both local and global registries.
+     *
+     * @param <T> the service type
+     * @param serviceClass the class of the service
+     * @param instance the service instance to register
+     * @throws NullPointerException if serviceClass or instance is null
+     */
     @Override
     public <T> void registerService(Class<T> serviceClass, T instance) {
         Objects.requireNonNull(serviceClass, "Service class cannot be null");
@@ -104,6 +150,12 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * Unregisters a service from the local registry.
+     *
+     * @param <T> the service type
+     * @param service the class of the service to unregister
+     */
     @Override
     public <T> void unregisterService(Class<T> service) {
         if (service == null) {
@@ -117,6 +169,11 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * Registers a service by its instance type in the local registry.
+     *
+     * @param service the service instance to register
+     */
     @Override
     public void registerService(Object service) {
         if (service == null) {
@@ -135,16 +192,31 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public PluginManager getPluginManager() {
         return pluginManager;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getPluginDataPath() {
         return (pluginDataDirectory != null) ? pluginDataDirectory.getAbsolutePath() : "";
     }
 
+    /**
+     * Logs an info message with the plugin name prefix.
+     *
+     * @param message the message to log
+     */
     @Override
     public void logInfo(String message) {
         if (log.isDebugEnabled()) {
@@ -153,6 +225,11 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * Logs a warning message with the plugin name prefix.
+     *
+     * @param message the message to log
+     */
     @Override
     public void logWarning(String message) {
         if (log.isWarnEnabled()) {
@@ -161,6 +238,12 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * Logs an error message with the plugin name prefix.
+     *
+     * @param message the message to log
+     * @param throwable the throwable to log
+     */
     @Override
     public void logError(String message, Throwable throwable) {
         if (log.isErrorEnabled()) {
@@ -169,6 +252,12 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * Shows a notification dialog to the user on the EDT.
+     *
+     * @param title the notification title
+     * @param message the notification message
+     */
     @Override
     public void showNotification(String title, String message) {
         SwingUtilities.invokeLater(() -> {
@@ -181,6 +270,11 @@ public class DefaultPluginContext implements PluginContext {
         });
     }
 
+    /**
+     * Logs a debug message with the plugin name prefix.
+     *
+     * @param message the message to log
+     */
     @Override
     public void logDebug(String message) {
         if (log.isDebugEnabled()) {
@@ -189,21 +283,41 @@ public class DefaultPluginContext implements PluginContext {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public ComponentRegistry getComponentRegistry() {
         return componentRegistry;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getPluginId() {
         return pluginId;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Plugin getPlugin() {
         return plugin;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public File getPluginDataDirectory() {
         return pluginDataDirectory;

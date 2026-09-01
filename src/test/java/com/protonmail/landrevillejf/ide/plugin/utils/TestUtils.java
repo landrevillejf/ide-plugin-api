@@ -46,6 +46,51 @@ public class TestUtils {
         when(mockPlugin.getVersion()).thenReturn("1.0.0");
     }
 
+    /**
+     * Runs the given action with the logger of the given class switched to
+     * {@code Level.OFF}, then restores the original level. Used to cover the
+     * false branch of {@code log.isXxxEnabled()} guards.
+     *
+     * @param clazz  the class whose logger must be silenced
+     * @param action the action to run while logging is off
+     */
+    public static void withLoggingOff(Class<?> clazz, Runnable action) {
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(clazz);
+        ch.qos.logback.classic.Level originalLevel = logger.getLevel();
+        logger.setLevel(ch.qos.logback.classic.Level.OFF);
+        try {
+            action.run();
+        } finally {
+            logger.setLevel(originalLevel);
+        }
+    }
+
+    /**
+     * Same as {@link #withLoggingOff(Class, Runnable)} but allows the action
+     * to throw checked exceptions, which are propagated to the caller.
+     *
+     * @param clazz  the class whose logger must be silenced
+     * @param action the action to run while logging is off
+     * @throws Exception if the action throws
+     */
+    public static void withLoggingOffThrowing(Class<?> clazz, ThrowingAction action) throws Exception {
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory.getLogger(clazz);
+        ch.qos.logback.classic.Level originalLevel = logger.getLevel();
+        logger.setLevel(ch.qos.logback.classic.Level.OFF);
+        try {
+            action.run();
+        } finally {
+            logger.setLevel(originalLevel);
+        }
+    }
+
+    @FunctionalInterface
+    public interface ThrowingAction {
+        void run() throws Exception;
+    }
+
     @FunctionalInterface
     public interface Condition {
         boolean isMet();

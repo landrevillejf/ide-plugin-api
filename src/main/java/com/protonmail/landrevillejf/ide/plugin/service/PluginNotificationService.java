@@ -6,6 +6,14 @@ import java.util.function.Consumer;
 
 /**
  * Advanced notification service for plugins with support for multiple channels and priorities.
+ * <p>
+ * Provides a rich notification system with typed notifications, priority levels,
+ * actionable notifications, and listener support.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginNotificationService {
 

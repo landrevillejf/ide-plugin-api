@@ -1,7 +1,11 @@
 package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
 import com.protonmail.landrevillejf.ide.plugin.service.PluginPermissionService;
+import com.protonmail.landrevillejf.ide.plugin.utils.LogCapture;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -310,5 +314,143 @@ class DefaultPluginPermissionServiceTest {
         assertFalse(permissionService.hasPermission(TEST_PLUGIN, "file.write"));
         assertFalse(permissionService.hasPermission(TEST_PLUGIN, "project.create"));
         assertFalse(permissionService.hasPermission(TEST_PLUGIN, "debug.execute"));
+    }
+
+    @Test
+    void roleEqualsHashCodeToString() {
+        // Créer un rôle et le récupérer
+        PluginPermissionService.Role role1 = permissionService.createRole(
+                "test-role", "Test Role", "Description");
+        PluginPermissionService.Role role2 = permissionService.getRole("test-role");
+
+        // Même objet ou même ID -> equals true
+        assertEquals(role1, role2);
+        assertEquals(role1.hashCode(), role2.hashCode());
+
+        // Rôle différent -> equals false
+        PluginPermissionService.Role other = permissionService.getRole("admin");
+        assertNotEquals(role1, other);
+
+        // toString contient les informations
+        String str = role1.toString();
+        assertTrue(str.contains("test-role"));
+        assertTrue(str.contains("Test Role"));
+        assertTrue(str.contains("permissions=0")); // aucune permission ajoutée
+    }
+
+    @Test
+    void addPermissionDuplicateReturnsFalse() {
+        PluginPermissionService.Role role = permissionService.getRole("developer");
+        assertNotNull(role);
+
+        // Ajouter une permission déjà présente (ex: file.read fait partie du rôle developer)
+        assertFalse(role.addPermission("file.read"));
+    }
+
+    @Test
+    void removePermissionNonExistentReturnsFalse() {
+        PluginPermissionService.Role role = permissionService.getRole("developer");
+        assertNotNull(role);
+
+        // Supprimer une permission qui n'est pas dans le rôle
+        assertFalse(role.removePermission("custom.permission.not.in.role"));
+    }
+
+    @Test
+    void permissionEqualsHashCodeToString() {
+        PluginPermissionService.Permission perm1 = permissionService.getPermission("file.read");
+        PluginPermissionService.Permission perm2 = permissionService.getPermission("file.read");
+
+        // Même ID -> equals true
+        assertEquals(perm1, perm2);
+        assertEquals(perm1.hashCode(), perm2.hashCode());
+
+        // Permission différente -> equals false
+        PluginPermissionService.Permission other = permissionService.getPermission("file.write");
+        assertNotEquals(perm1, other);
+
+        // toString contient les informations
+        String str = perm1.toString();
+        assertTrue(str.contains("file.read"));
+        assertTrue(str.contains("category='file'"));
+        assertTrue(str.contains("system=true"));
+    }
+
+    @Test
+    void grantPermissionAlreadyGrantedReturnsFalse() {
+        permissionService.grantPermission(TEST_PLUGIN, "file.read");
+        boolean secondGrant = permissionService.grantPermission(TEST_PLUGIN, "file.read");
+        assertFalse(secondGrant);
+    }
+
+    @Test
+    void revokePermissionWhenPluginHasNoneReturnsFalse() {
+        boolean revoked = permissionService.revokePermission("plugin.sans.permissions", "file.read");
+        assertFalse(revoked);
+    }
+
+    @Test
+    void getPluginPermissionsAfterRoleRemoval() {
+        permissionService.assignRole(TEST_PLUGIN, "user");
+        permissionService.removeRole(TEST_PLUGIN, "user");
+
+        Set<String> perms = permissionService.getPluginPermissions(TEST_PLUGIN);
+        assertFalse(perms.contains("ui.dialog.show")); // rôle retiré
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should skip all logging when the permission logger is disabled")
+        void shouldCoverLogGuardFalseBranches() throws Exception {
+            TestUtils.withLoggingOffThrowing(DefaultPluginPermissionService.class, () -> {
+                // Constructor + default roles initialization log guards
+                DefaultPluginPermissionService quietService = new DefaultPluginPermissionService();
+
+                // grantPermission warn (unknown permission) and debug guards
+                assertFalse(quietService.grantPermission(TEST_PLUGIN, "no.such.permission"));
+                assertTrue(quietService.grantPermission(TEST_PLUGIN, "file.read"));
+
+                // revokePermission debug guard
+                assertTrue(quietService.revokePermission(TEST_PLUGIN, "file.read"));
+
+                // assignRole warn (unknown role), already-assigned and assigned debug guards
+                assertFalse(quietService.assignRole(TEST_PLUGIN, "no.such.role"));
+                assertTrue(quietService.assignRole(TEST_PLUGIN, "guest"));
+                assertFalse(quietService.assignRole(TEST_PLUGIN, "guest"));
+
+                // removeRole debug guard
+                assertTrue(quietService.removeRole(TEST_PLUGIN, "guest"));
+
+                // createPermission warn (already exists) guard
+                assertNotNull(quietService.createPermission("file.read", "desc", "file"));
+
+                // registerSystemPermission warn (override) guard
+                quietService.registerSystemPermission(
+                        quietService.createPermission("custom.perm", "desc", "custom"));
+
+                // createRole warn (already exists) guard
+                assertNotNull(quietService.createRole("guest", "Guest", "desc"));
+
+                // clearAuditLog debug guard (audit entries exist after the mutations above)
+                quietService.clearAuditLog(TEST_PLUGIN);
+
+                // RoleImpl.removePermission debug guard
+                PluginPermissionService.Role guest = quietService.getRole("guest");
+                assertTrue(guest.removePermission("file.read"));
+                assertFalse(guest.removePermission("file.read"));
+            });
+        }
+
+        @Test
+        @DisplayName("Role equals rejects null and foreign types")
+        void roleEqualsRejectsNullOrForeignType() {
+            PluginPermissionService.Role guest = permissionService.getRole("guest");
+            assertNotNull(guest);
+            assertFalse(guest.equals(null));
+            assertFalse(guest.equals("guest"));
+        }
     }
 }

@@ -8,6 +8,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginDependencyResolver}.
+ * <p>
+ * Provides dependency tracking with required, optional, and conflicting dependency levels,
+ * resolution path computation, circular dependency detection, and version compatibility checking.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginDependencyResolver
+ */
 @Slf4j
 public final class DefaultPluginDependencyResolver implements PluginDependencyResolver {
 
@@ -55,11 +67,8 @@ public final class DefaultPluginDependencyResolver implements PluginDependencyRe
         boolean removed = pluginDeps.removeIf(dep -> dep.getProviderId().equals(dependencyId));
 
         if (removed) {
-            // Update dependents map
-            List<String> pluginDependents = dependents.get(dependencyId);
-            if (pluginDependents != null) {
-                pluginDependents.remove(pluginId);
-            }
+            // Update dependents map (the entry always exists: addDependency creates it)
+            dependents.get(dependencyId).remove(pluginId);
             if (log.isDebugEnabled()) {
                 log.debug("Dependency removed: plugin={} no longer depends on {}", pluginId, dependencyId);
             }
@@ -343,13 +352,12 @@ public final class DefaultPluginDependencyResolver implements PluginDependencyRe
     private void detectCycles(String pluginId, Set<String> visited, Set<String> recursionStack,
                               List<String> path, List<List<String>> cycles) {
         if (recursionStack.contains(pluginId)) {
-            // Found a cycle
+            // Found a cycle: pluginId is always present in the current path
+            // because path and recursionStack are maintained together
             int startIndex = path.indexOf(pluginId);
-            if (startIndex >= 0) {
-                List<String> cycle = new ArrayList<>(path.subList(startIndex, path.size()));
-                cycle.add(pluginId);
-                cycles.add(cycle);
-            }
+            List<String> cycle = new ArrayList<>(path.subList(startIndex, path.size()));
+            cycle.add(pluginId);
+            cycles.add(cycle);
             return;
         }
 

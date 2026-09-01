@@ -2,7 +2,14 @@ package com.protonmail.landrevillejf.ide.plugin.service;
 
 /**
  * Service locator for accessing all plugin services.
- * This class provides centralized access to all plugin-related services.
+ * <p>
+ * This interface provides centralized access to all 13 plugin-related services,
+ * as well as support for custom service registration and retrieval.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginServiceLocator {
 

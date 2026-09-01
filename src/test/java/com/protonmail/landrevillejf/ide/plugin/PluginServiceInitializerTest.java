@@ -219,6 +219,32 @@ class PluginServiceInitializerTest {
     }
 
     @Test
+    void stubServiceLocator_ShouldResolveBuiltInAndCustomServicesViaGenericAccessor() {
+        PluginServiceLocator locator = PluginServiceInitializer.createServiceLocator(
+                serviceRegistry,
+                pluginEventBus,
+                applicationEventBus
+        );
+
+        locator.registerService(String.class, "custom");
+
+        assertSame(locator.getLoggingService(), locator.getService(PluginLoggingService.class));
+        assertSame(locator.getCacheService(), locator.getService(PluginCacheService.class));
+        assertSame(locator.getNotificationService(), locator.getService(PluginNotificationService.class));
+        assertSame(locator.getMetricsService(), locator.getService(PluginMetricsService.class));
+        assertSame(locator.getPermissionService(), locator.getService(PluginPermissionService.class));
+        assertSame(locator.getAsyncTaskExecutor(), locator.getService(PluginAsyncTaskExecutor.class));
+        assertSame(locator.getConfigurationValidator(), locator.getService(PluginConfigurationValidator.class));
+        assertSame(locator.getHookService(), locator.getService(PluginHookService.class));
+        assertSame(locator.getDataStore(), locator.getService(PluginDataStore.class));
+        assertSame(locator.getResourceManager(), locator.getService(PluginResourceManager.class));
+        assertSame(locator.getDependencyResolver(), locator.getService(PluginDependencyResolver.class));
+        assertSame(locator.getUpdateService(), locator.getService(PluginUpdateService.class));
+        assertSame(locator.getMonitoringService(), locator.getService(PluginMonitoringService.class));
+        assertEquals("custom", locator.getService(String.class));
+    }
+
+    @Test
     void stubLoggingService_ShouldHaveDefaultBehavior() {
         // Given
         PluginLoggingService loggingService = PluginServiceInitializer.StubServices.LOGGING_SERVICE;
@@ -1239,5 +1265,181 @@ class PluginServiceInitializerTest {
         // Then
         assertNotNull(context.getHookData());
         assertEquals("value", context.getHookData().get("test"));
+    }
+
+    // ==================== BATCH 1: COVERAGE GAP TESTS ====================
+
+    @Test
+    void stubMonitoringService_ShouldCoverAllMethods() {
+        PluginMonitoringService svc = PluginServiceInitializer.StubServices.MONITORING_SERVICE;
+        assertEquals(0L, svc.getMemoryUsage("plugin"));
+        assertEquals(0, svc.getThreadCount("plugin"));
+        assertEquals(0L, svc.getUptime("plugin"));
+        assertEquals(0, svc.getWarningCount("plugin"));
+        assertNull(svc.createAlert("plugin", PluginMonitoringService.AlertSeverity.INFO, "title", "msg"));
+        assertNotNull(svc.getActiveAlerts());
+        assertTrue(svc.getActiveAlerts().isEmpty());
+        assertNotNull(svc.getPluginAlerts("plugin"));
+        assertTrue(svc.getPluginAlerts("plugin").isEmpty());
+        assertDoesNotThrow(() -> svc.resolveAlert("alert-1"));
+        assertNotNull(svc.getAlertHistory(10));
+        assertTrue(svc.getAlertHistory(10).isEmpty());
+        assertDoesNotThrow(() -> svc.clearAlertHistory());
+        PluginMonitoringService.HealthMonitorListener mockListener = mock(PluginMonitoringService.HealthMonitorListener.class);
+        assertDoesNotThrow(() -> svc.registerHealthMonitorListener(mockListener));
+        assertDoesNotThrow(() -> svc.unregisterHealthMonitorListener(mockListener));
+    }
+
+    @Test
+    void stubDependencyResolver_ShouldCoverAllMethods() {
+        PluginDependencyResolver resolver = PluginServiceInitializer.StubServices.DEPENDENCY_RESOLVER;
+        assertNull(resolver.addDependency("plugin", "dep", "1.0", PluginDependencyResolver.DependencyLevel.REQUIRED));
+        assertNotNull(resolver.getRequiredDependencies("plugin"));
+        assertTrue(resolver.getRequiredDependencies("plugin").isEmpty());
+        assertNotNull(resolver.getOptionalDependencies("plugin"));
+        assertTrue(resolver.getOptionalDependencies("plugin").isEmpty());
+        assertNotNull(resolver.getConflictingDependencies("plugin"));
+        assertTrue(resolver.getConflictingDependencies("plugin").isEmpty());
+        assertNotNull(resolver.getResolutionPath("plugin"));
+        assertTrue(resolver.getResolutionPath("plugin").isEmpty());
+        assertNotNull(resolver.detectCircularDependencies("plugin"));
+        assertTrue(resolver.detectCircularDependencies("plugin").isEmpty());
+        assertNotNull(resolver.getDependents("plugin"));
+        assertTrue(resolver.getDependents("plugin").isEmpty());
+    }
+
+    @Test
+    void stubHookService_ShouldCoverRemainingMethods() {
+        PluginHookService svc = PluginServiceInitializer.StubServices.HOOK_SERVICE;
+        assertEquals(0, svc.unregisterHooksByType("plugin", PluginHookService.HookType.PRE_ENABLE));
+        assertNull(svc.executeHook("hook-999", new java.util.HashMap<>()));
+        assertNotNull(svc.getPluginHooks("plugin"));
+        assertTrue(svc.getPluginHooks("plugin").isEmpty());
+        assertNotNull(svc.getHooksByType("plugin", PluginHookService.HookType.PRE_ENABLE));
+        assertTrue(svc.getHooksByType("plugin", PluginHookService.HookType.PRE_ENABLE).isEmpty());
+        assertNotNull(svc.getHookExecutionHistory("plugin", 10));
+        assertTrue(svc.getHookExecutionHistory("plugin", 10).isEmpty());
+        assertDoesNotThrow(() -> svc.clearHookExecutionHistory("plugin"));
+    }
+
+    @Test
+    void stubHookService_ExecuteHooks_AnonymousContext_ShouldCoverSetResultGetResultCancel() {
+        PluginHookService svc = PluginServiceInitializer.StubServices.HOOK_SERVICE;
+        java.util.Map<String, Object> data = new java.util.HashMap<>();
+        var ctx = svc.executeHooks("plugin", PluginHookService.HookType.PRE_ENABLE, data);
+        assertNotNull(ctx);
+        // Exercise the anonymous HookContext methods
+        assertDoesNotThrow(() -> ctx.setResult("result-value"));
+        assertNull(ctx.getResult());
+        assertDoesNotThrow(() -> ctx.cancel());
+    }
+
+    @Test
+    void stubNotificationService_ShouldCoverNotifyWithMetadataAndActions() {
+        PluginNotificationService svc = PluginServiceInitializer.StubServices.NOTIFICATION_SERVICE;
+        String id1 = svc.notifyWithMetadata("plugin",
+                PluginNotificationService.NotificationType.INFO,
+                PluginNotificationService.Priority.NORMAL,
+                "title", "message", new java.util.HashMap<>());
+        assertNotNull(id1);
+        assertTrue(id1.startsWith("notif-"));
+
+        String id2 = svc.notifyWithActions("plugin",
+                PluginNotificationService.NotificationType.INFO,
+                PluginNotificationService.Priority.NORMAL,
+                "title", "message", java.util.Collections.emptyList());
+        assertNotNull(id2);
+        assertTrue(id2.startsWith("notif-"));
+    }
+
+    @Test
+    void stubCacheService_ShouldCoverClearEvictionMaxSizeResetStats() {
+        PluginCacheService svc = PluginServiceInitializer.StubServices.CACHE_SERVICE;
+        svc.put("cov-plugin", "k", "v");
+        assertDoesNotThrow(() -> svc.clear("cov-plugin"));
+        assertNull(svc.get("cov-plugin", "k"));
+        assertDoesNotThrow(() -> svc.setEvictionPolicy("plugin", PluginCacheService.EvictionPolicy.LRU));
+        assertDoesNotThrow(() -> svc.setMaxSize("plugin", 100));
+        assertDoesNotThrow(() -> svc.resetStatistics("plugin"));
+    }
+
+    @Test
+    void stubDataStore_ShouldCoverRetrieveTypedDeleteSizeBackups() {
+        PluginDataStore svc = PluginServiceInitializer.StubServices.DATA_STORE;
+        svc.store("ds-cov", "k1", "value1");
+        // retrieve with type - matching
+        String val = svc.retrieve("ds-cov", "k1", String.class);
+        assertEquals("value1", val);
+        // delete existing
+        assertTrue(svc.delete("ds-cov", "k1"));
+        // getSize / getTotalSize
+        assertEquals(0, svc.getSize("ds-cov", "missing"));
+        assertEquals(0, svc.getTotalSize("ds-cov"));
+        // getBackups
+        assertNotNull(svc.getBackups("ds-cov"));
+        assertTrue(svc.getBackups("ds-cov").isEmpty());
+    }
+
+    @Test
+    void stubUpdateService_ShouldCoverSetAutoUpdate() {
+        PluginUpdateService svc = PluginServiceInitializer.StubServices.UPDATE_SERVICE;
+        assertDoesNotThrow(() -> svc.setAutoUpdate("plugin", true));
+    }
+
+    @Test
+    void stubServices_StaticInitializer_ShouldBeCovered() {
+        // Accessing all StubServices fields triggers the static initializer
+        assertNotNull(PluginServiceInitializer.StubServices.LOGGING_SERVICE);
+        assertNotNull(PluginServiceInitializer.StubServices.CACHE_SERVICE);
+        assertNotNull(PluginServiceInitializer.StubServices.NOTIFICATION_SERVICE);
+        assertNotNull(PluginServiceInitializer.StubServices.METRICS_SERVICE);
+        assertNotNull(PluginServiceInitializer.StubServices.PERMISSION_SERVICE);
+        assertNotNull(PluginServiceInitializer.StubServices.ASYNC_EXECUTOR);
+        assertNotNull(PluginServiceInitializer.StubServices.CONFIG_VALIDATOR);
+        assertNotNull(PluginServiceInitializer.StubServices.HOOK_SERVICE);
+        assertNotNull(PluginServiceInitializer.StubServices.DATA_STORE);
+        assertNotNull(PluginServiceInitializer.StubServices.RESOURCE_MANAGER);
+        assertNotNull(PluginServiceInitializer.StubServices.DEPENDENCY_RESOLVER);
+        assertNotNull(PluginServiceInitializer.StubServices.UPDATE_SERVICE);
+        assertNotNull(PluginServiceInitializer.StubServices.MONITORING_SERVICE);
+    }
+
+    @Test
+    void stubServiceLocator_RegisterService_ShouldCoverDebugLog() {
+        PluginServiceInitializer.StubPluginServiceLocator locator =
+                new PluginServiceInitializer.StubPluginServiceLocator();
+        // Register a custom service and then retrieve it to cover the registeredServices map path
+        locator.registerService(Runnable.class, () -> {});
+        // The custom registration should be returned by getService
+        assertNotNull(locator.getService(Runnable.class));
+    }
+
+    @Test
+    void stubServiceLocator_RegisterService_ShouldBeNoOp_WhenDebugLoggingOff() {
+        PluginServiceInitializer.StubPluginServiceLocator locator =
+                new PluginServiceInitializer.StubPluginServiceLocator();
+        com.protonmail.landrevillejf.ide.plugin.utils.TestUtils.withLoggingOff(
+                PluginServiceInitializer.class,
+                () -> locator.registerService(Runnable.class, () -> {}));
+        assertNotNull(locator.getService(Runnable.class));
+    }
+
+    @Test
+    void stubServices_ImplicitConstructor_ShouldBeReachable() {
+        // Covers the synthetic default constructor of the StubServices holder class
+        assertNotNull(new PluginServiceInitializer.StubServices());
+    }
+
+    @Test
+    void stubDataStore_Delete_ShouldHandleUnknownPluginAndMissingKey() {
+        PluginServiceInitializer.StubDataStore store = new PluginServiceInitializer.StubDataStore();
+
+        // Unknown plugin -> internal map is null
+        assertFalse(store.delete("unknown.plugin", "any-key"));
+
+        // Known plugin but missing key -> remove returns null
+        store.store("plugin.a", "present", "value");
+        assertFalse(store.delete("plugin.a", "absent"));
+        assertTrue(store.delete("plugin.a", "present"));
     }
 }

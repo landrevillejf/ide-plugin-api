@@ -145,11 +145,21 @@ public abstract class AbstractPlugin implements Plugin {
     // DESCRIPTOR AND BASIC INFORMATION METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public PluginDescriptor getDescriptor() {
         return descriptor;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getAuthorEmail() {
         return authorEmail;
@@ -164,6 +174,11 @@ public abstract class AbstractPlugin implements Plugin {
         this.authorEmail = authorEmail;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getCategory() {
         return category;
@@ -178,6 +193,11 @@ public abstract class AbstractPlugin implements Plugin {
         this.category = category;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Map<String, Object> getCustomMetadata() {
         return new HashMap<>(customMetadata);
@@ -206,6 +226,11 @@ public abstract class AbstractPlugin implements Plugin {
     // MANIFEST INFORMATION METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getSpecificationTitle() {
         return specificationTitle;
@@ -220,6 +245,11 @@ public abstract class AbstractPlugin implements Plugin {
         this.specificationTitle = specificationTitle;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getSpecificationVersion() {
         return specificationVersion;
@@ -234,6 +264,11 @@ public abstract class AbstractPlugin implements Plugin {
         this.specificationVersion = specificationVersion;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getSpecificationVendor() {
         return specificationVendor;
@@ -248,6 +283,11 @@ public abstract class AbstractPlugin implements Plugin {
         this.specificationVendor = specificationVendor;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getImplementationVersion() {
         return implementationVersion;
@@ -266,6 +306,13 @@ public abstract class AbstractPlugin implements Plugin {
     // LIFECYCLE METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Stores the context, transitions the state to {@code INITIALIZED},
+     * and invokes {@link #onStart()}.
+     * </p>
+     */
     @Override
     public void initialize(PluginContext context) {
         this.context = context;
@@ -273,6 +320,14 @@ public abstract class AbstractPlugin implements Plugin {
         onStart();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Calls {@link #beforeEnable()}, transitions through {@code ENABLING}
+     * to {@code ENABLED}, and invokes {@link #afterEnable()}. Startup
+     * time metrics are recorded on completion.
+     * </p>
+     */
     @Override
     public void enable() {
         long startTime = System.currentTimeMillis();
@@ -296,6 +351,13 @@ public abstract class AbstractPlugin implements Plugin {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Calls {@link #beforeDisable()}, transitions through {@code DISABLING}
+     * to {@code DISABLED}, and invokes {@link #afterDisable()}.
+     * </p>
+     */
     @Override
     public void disable() {
         if (!beforeDisable()) {
@@ -309,6 +371,13 @@ public abstract class AbstractPlugin implements Plugin {
         afterDisable();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Transitions through {@code SHUTTING_DOWN}, invokes {@link #onStop()}
+     * and {@link #cleanup()}, then transitions to {@code SHUTDOWN}.
+     * </p>
+     */
     @Override
     public void shutdown() {
         setState(PluginStatus.SHUTTING_DOWN);
@@ -321,11 +390,25 @@ public abstract class AbstractPlugin implements Plugin {
     // STATE MANAGEMENT METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public PluginStatus getState() {
         return state;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Validates the transition using {@link PluginStatus#canTransitionTo(PluginStatus)}
+     * and stores the new state if valid.
+     * </p>
+     *
+     * @throws IllegalStateException if the transition is not allowed
+     */
     @Override
     public void setState(PluginStatus newState) {
         if (!this.state.canTransitionTo(newState)) {
@@ -336,6 +419,11 @@ public abstract class AbstractPlugin implements Plugin {
         this.state = newState;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public boolean isEnabled() {
         return state == PluginStatus.ENABLED;
@@ -345,6 +433,11 @@ public abstract class AbstractPlugin implements Plugin {
     // DEPENDENCY AND CONFIGURATION METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<String> getDependencies() {
         return new ArrayList<>(dependenciesList);
@@ -368,6 +461,12 @@ public abstract class AbstractPlugin implements Plugin {
         dependenciesList.addAll(dependencies);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * All entries are stored in an internal {@link ConcurrentHashMap}.
+     * </p>
+     */
     @Override
     public void injectDependencies(Map<String, Object> dependencies) {
         this.dependencies.putAll(dependencies);
@@ -385,6 +484,11 @@ public abstract class AbstractPlugin implements Plugin {
         return (T) dependencies.get(name);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public PluginConfig getConfig() {
         return config;
@@ -399,6 +503,11 @@ public abstract class AbstractPlugin implements Plugin {
         this.config = config;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Map<String, Object> getConfigurationSchema() {
         return Map.of(
@@ -407,6 +516,15 @@ public abstract class AbstractPlugin implements Plugin {
         );
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Validates the configuration before applying it. If valid, publishes
+     * a {@code CONFIG_CHANGED} event.
+     * </p>
+     *
+     * @return {@code true} if the configuration was valid and applied
+     */
     @Override
     public boolean updateConfiguration(Map<String, Object> config) {
         if (validateConfiguration(config)) {
@@ -417,12 +535,22 @@ public abstract class AbstractPlugin implements Plugin {
         return false;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public boolean saveSettings(Map<String, Object> settings) {
         this.settings.putAll(settings);
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Map<String, Object> loadSettings() {
         return new HashMap<>(settings);
@@ -454,11 +582,21 @@ public abstract class AbstractPlugin implements Plugin {
     // RESOURCE MANAGEMENT METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Map<String, Object> getProvidedResources() {
         return new HashMap<>(providedResources);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Object provideResource(String resourceKey) {
         return providedResources.get(resourceKey);
@@ -489,11 +627,28 @@ public abstract class AbstractPlugin implements Plugin {
     // VALIDATION AND COMPATIBILITY METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Delegates to {@link #validateDependencies()} and
+     * {@link #validateConfiguration(Map)}.
+     * </p>
+     *
+     * @return {@code true} if both dependencies and configuration are valid
+     */
     @Override
     public boolean validate() {
         return validateDependencies() && validateConfiguration(config.toMap());
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Checks that every declared dependency has been injected.
+     * </p>
+     *
+     * @return {@code true} if all dependencies are present
+     */
     @Override
     public boolean validateDependencies() {
         for (String dependency : dependenciesList) {
@@ -504,12 +659,26 @@ public abstract class AbstractPlugin implements Plugin {
         return true;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The base implementation only checks for {@code null}.
+     * Subclasses should override with stricter validation.
+     * </p>
+     *
+     * @return {@code true} if the configuration map is non-null
+     */
     @Override
     public boolean validateConfiguration(Map<String, Object> config) {
         // Basic validation - subclasses can override with more specific validation
         return config != null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getRequiredHostVersion() {
         return requiredHostVersion;
@@ -524,6 +693,15 @@ public abstract class AbstractPlugin implements Plugin {
         this.requiredHostVersion = requiredHostVersion;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The base implementation always returns a compatible result.
+     * Subclasses can override with more specific checks.
+     * </p>
+     *
+     * @return a {@link CompatibilityResult} indicating compatibility status
+     */
     @Override
     public CompatibilityResult checkCompatibility() {
         // Basic compatibility check - subclasses can override
@@ -538,11 +716,25 @@ public abstract class AbstractPlugin implements Plugin {
         return new CompatibilityResult(compatible, message);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<String> getIncompatibilities() {
         return List.of(); // Subclasses can override
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Uses simple numeric version comparison. Subclasses can override
+     * with more sophisticated logic.
+     * </p>
+     *
+     * @return {@code true} if the current version is lower than the target
+     */
     @Override
     public boolean canUpgradeTo(String targetVersion) {
         // Simple version comparison - subclasses can override with more sophisticated logic
@@ -558,6 +750,13 @@ public abstract class AbstractPlugin implements Plugin {
     // EVENT HANDLING METHODS (UPDATED)
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Dispatches to the appropriate {@code on*} handler method based
+     * on the event type.
+     * </p>
+     */
     @Override
     public void handleEvent(PluginEventType eventType, Object eventData) {
         switch (eventType) {
@@ -573,16 +772,20 @@ public abstract class AbstractPlugin implements Plugin {
             case SYSTEM_EVENT:
                 onSystemEvent(eventData);
                 break;
-            case CUSTOM_EVENT:
-                onCustomEvent(eventData);
-                break;
             default:
-                // Default case for exhaustive switch
+                // CUSTOM_EVENT and any unknown event type are routed to the custom handler
                 onCustomEvent(eventData);
                 break;
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Creates a {@link GenericEvent} and publishes it through the
+     * internal event bus.
+     * </p>
+     */
     @Override
     public void publishEvent(String eventType, Object eventData) {
         // Create a generic event and publish it through the event bus
@@ -600,11 +803,21 @@ public abstract class AbstractPlugin implements Plugin {
         eventBus.publish(event);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<String> getPublishedEvents() {
         return new ArrayList<>(publishedEvents);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<String> getSubscribedEvents() {
         return new ArrayList<>(subscribedEvents);
@@ -808,6 +1021,14 @@ public abstract class AbstractPlugin implements Plugin {
     // ERROR HANDLING AND RECOVERY METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Updates error metrics and attempts automatic recovery if
+     * {@link #isRecoverable()} returns {@code true}. If recovery fails,
+     * the error is escalated to {@link #handleUncaughtException(Thread, Throwable)}.
+     * </p>
+     */
     @Override
     public void onError(Throwable throwable) {
         // Default error handling - log and update metrics
@@ -827,6 +1048,12 @@ public abstract class AbstractPlugin implements Plugin {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Logs the exception at ERROR level and updates error metrics.
+     * </p>
+     */
     @Override
     public void handleUncaughtException(Thread thread, Throwable throwable) {
         if (log.isErrorEnabled()) {
@@ -838,6 +1065,11 @@ public abstract class AbstractPlugin implements Plugin {
         metrics.put("lastUncaughtException", System.currentTimeMillis());
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@code true} always, indicating the plugin can recover automatically
+     */
     @Override
     public boolean isRecoverable() {
         return true;
@@ -860,17 +1092,33 @@ public abstract class AbstractPlugin implements Plugin {
     // PERFORMANCE AND MONITORING METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Map<String, Object> getMetrics() {
         return new HashMap<>(metrics);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Clears all metrics and re-initializes default counters.
+     * </p>
+     */
     @Override
     public void resetMetrics() {
         metrics.clear();
         initializeMetrics();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public long getAverageStartupTime() {
         long count = startupCount.get();
@@ -880,6 +1128,15 @@ public abstract class AbstractPlugin implements Plugin {
         return startupTimeTotal.get() / count;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Reports {@code DOWN} if the plugin is in {@code ERROR} or {@code SHUTDOWN}
+     * state; otherwise reports {@code UP}.
+     * </p>
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public HealthStatus healthCheck() {
         boolean healthy = state != PluginStatus.ERROR && state != PluginStatus.SHUTDOWN;
@@ -921,23 +1178,47 @@ public abstract class AbstractPlugin implements Plugin {
     // LOCALIZATION AND DOCUMENTATION METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The base implementation simply returns the key unchanged.
+     * Subclasses can override with proper resource-bundle lookup.
+     * </p>
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getLocalizedMessage(String key, String locale) {
         // Simple implementation - subclasses can override with proper localization
         return key;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@code null} always; subclasses should override
+     */
     @Override
     public String getDocumentationUrl() {
         // Default implementation - subclasses can override
         return null;
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public String getHelpText() {
         return getDescription();
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<String> getUsageExamples() {
         return List.of(
@@ -951,6 +1232,11 @@ public abstract class AbstractPlugin implements Plugin {
     // SECURITY AND PERMISSION METHODS
     // ========================================================================
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<String> getDefaultPermissions() {
         return List.of("read", "write");

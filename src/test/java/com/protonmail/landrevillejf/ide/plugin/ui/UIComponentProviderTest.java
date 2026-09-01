@@ -81,6 +81,32 @@ class UIComponentProviderTest {
         assertFalse(provider.managesComponentLifecycle());
     }
 
+    @Test
+    @DisplayName("Default onComponentAdded should not throw")
+    void testDefaultOnComponentAdded() {
+        UIComponentProvider provider = new UIComponentProvider() {
+            @Override
+            public List<UIComponent> provideComponents() {
+                return new ArrayList<>();
+            }
+        };
+
+        assertDoesNotThrow(() -> provider.onComponentAdded("test-id"));
+    }
+
+    @Test
+    @DisplayName("Default onComponentRemoved should not throw")
+    void testDefaultOnComponentRemoved() {
+        UIComponentProvider provider = new UIComponentProvider() {
+            @Override
+            public List<UIComponent> provideComponents() {
+                return new ArrayList<>();
+            }
+        };
+
+        assertDoesNotThrow(() -> provider.onComponentRemoved("test-id"));
+    }
+
     // Test implementation
     private static class TestProvider implements UIComponentProvider {
         public boolean wasComponentAdded = false;

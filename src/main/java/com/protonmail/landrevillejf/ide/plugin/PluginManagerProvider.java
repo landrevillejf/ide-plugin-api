@@ -6,9 +6,30 @@ import com.protonmail.landrevillejf.swingide.core.registry.SimpleServiceRegistry
 import java.io.File;
 import java.util.*;
 
+/**
+ * Provider for obtaining the PluginManager instance.
+ * <p>
+ * This class provides a singleton accessor to the plugin manager,
+ * using ServiceLoader to discover implementations or falling back
+ * to a stub implementation if none is found.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 public class PluginManagerProvider {
     private static PluginManager instance;
 
+    /**
+     * Returns the singleton PluginManager instance.
+     * <p>
+     * If no instance exists, it will be created by either loading via
+     * ServiceLoader or creating a stub implementation.
+     * </p>
+     *
+     * @return the plugin manager instance
+     */
     public static PluginManager getInstance() {
         if (instance == null) {
             instance = createPluginManager();
@@ -16,6 +37,15 @@ public class PluginManagerProvider {
         return instance;
     }
 
+    /**
+     * Creates a PluginManager instance.
+     * <p>
+     * First attempts to load via ServiceLoader, then falls back to
+     * creating a stub implementation if none is found.
+     * </p>
+     *
+     * @return a plugin manager instance
+     */
     private static PluginManager createPluginManager() {
         // 1. Chercher via ServiceLoader
         ServiceLoader<PluginManager> loader = ServiceLoader.load(PluginManager.class);
@@ -27,6 +57,15 @@ public class PluginManagerProvider {
         return createStubPluginManager();
     }
 
+    /**
+     * Creates a stub PluginManager with minimal functionality.
+     * <p>
+     * This stub provides basic plugin state tracking but does not
+     * actually load or manage plugins.
+     * </p>
+     *
+     * @return a stub plugin manager
+     */
     private static PluginManager createStubPluginManager() {
         // Créer un vrai contexte pour le stub
         SimpleServiceRegistry serviceRegistry = new SimpleServiceRegistry();

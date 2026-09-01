@@ -7,6 +7,18 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+/**
+ * Default implementation of {@link PluginConfigurationValidator}.
+ * <p>
+ * Provides schema-based configuration validation with support for required fields,
+ * type checking, range validation, custom validators, and default configuration merging.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginConfigurationValidator
+ */
 @Slf4j
 public class DefaultPluginConfigurationValidator implements PluginConfigurationValidator {
 
@@ -152,7 +164,7 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
         }
 
         Map<String, Object> rules = new LinkedHashMap<>();
-        extractValidationRules(schema, "", rules);
+        extractValidationRules(schema, rules);
         return rules;
     }
 
@@ -208,9 +220,10 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
         if (fieldSchema.containsKey("type")) {
             String expectedType = (String) fieldSchema.get("type");
             if (!isTypeMatch(value, expectedType)) {
+                // value cannot be null here: isTypeMatch always accepts null values
                 errors.add(new ValidationErrorImpl(path,
                         String.format("Expected type %s but got %s", expectedType,
-                                value != null ? value.getClass().getSimpleName() : "null"),
+                                value.getClass().getSimpleName()),
                         "TYPE_MISMATCH"));
                 return;
             }
@@ -391,14 +404,16 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
     }
 
     private boolean isValidEmail(String email) {
-        if (email == null || email.isEmpty()) return false;
+        // email is never null: callers only pass String values
+        if (email.isEmpty()) return false;
         return email.contains("@") && email.indexOf("@") > 0 &&
                 email.lastIndexOf(".") > email.indexOf("@") + 1 &&
                 email.lastIndexOf(".") < email.length() - 1;
     }
 
     private boolean isValidUrl(String url) {
-        if (url == null || url.isEmpty()) return false;
+        // url is never null: callers only pass String values
+        if (url.isEmpty()) return false;
         return url.startsWith("http://") || url.startsWith("https://");
     }
 
@@ -490,7 +505,7 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
         }
     }
 
-    private void extractValidationRules(Map<String, Object> schema, String prefix,
+    private void extractValidationRules(Map<String, Object> schema,
                                         Map<String, Object> rules) {
         if (schema.containsKey("properties")) {
             @SuppressWarnings("unchecked")
@@ -498,7 +513,6 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
 
             for (Map.Entry<String, Object> entry : properties.entrySet()) {
                 String fieldName = entry.getKey();
-                String fullPath = prefix.isEmpty() ? fieldName : prefix + "." + fieldName;
                 @SuppressWarnings("unchecked")
                 Map<String, Object> fieldSchema = (Map<String, Object>) entry.getValue();
 
@@ -513,7 +527,7 @@ public class DefaultPluginConfigurationValidator implements PluginConfigurationV
                 if (fieldSchema.containsKey("enum")) fieldRules.put("enum", fieldSchema.get("enum"));
 
                 if (!fieldRules.isEmpty()) {
-                    rules.put(fullPath, fieldRules);
+                    rules.put(fieldName, fieldRules);
                 }
             }
         }

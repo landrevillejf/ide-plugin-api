@@ -4,7 +4,17 @@ import com.protonmail.landrevillejf.ide.plugin.service.*;
 
 /**
  * Extended plugin context providing comprehensive access to all plugin services.
- * This interface extends the basic PluginContext with additional service access methods.
+ * <p>
+ * This interface extends the basic {@link PluginContext} with convenience methods
+ * for retrieving each of the 13 standard plugin services directly, without requiring
+ * a {@link PluginServiceLocator} lookup.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginContext
+ * @see DefaultExtendedPluginContext
  */
 public interface ExtendedPluginContext extends PluginContext {
 

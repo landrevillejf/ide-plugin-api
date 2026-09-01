@@ -35,4 +35,28 @@ class PluginStatusTest {
         assertFalse(PluginStatus.UNLOADED.canTransitionTo(PluginStatus.ENABLED));
         assertFalse(PluginStatus.SHUTDOWN.canTransitionTo(PluginStatus.ENABLED));
     }
+
+    @Test
+    void canTransitionTo_CoversAllStateSpecificBranches() {
+        assertTrue(PluginStatus.UNLOADED.canTransitionTo(PluginStatus.LOADED));
+        assertTrue(PluginStatus.LOADED.canTransitionTo(PluginStatus.INITIALIZED));
+        assertTrue(PluginStatus.LOADED.canTransitionTo(PluginStatus.ENABLING));
+        assertTrue(PluginStatus.INITIALIZED.canTransitionTo(PluginStatus.DISABLED));
+        assertTrue(PluginStatus.DISABLED.canTransitionTo(PluginStatus.SHUTTING_DOWN));
+        assertTrue(PluginStatus.ENABLED.canTransitionTo(PluginStatus.DISABLING));
+        assertTrue(PluginStatus.ENABLING.canTransitionTo(PluginStatus.ERROR));
+        assertTrue(PluginStatus.DISABLING.canTransitionTo(PluginStatus.ERROR));
+        assertTrue(PluginStatus.SHUTTING_DOWN.canTransitionTo(PluginStatus.SHUTDOWN));
+        assertTrue(PluginStatus.RELOADING.canTransitionTo(PluginStatus.LOADED));
+        assertTrue(PluginStatus.ENABLED.canTransitionTo(PluginStatus.ENABLED));
+        assertFalse(PluginStatus.ERROR.canTransitionTo(PluginStatus.ENABLED));
+        assertFalse(PluginStatus.RELOADING.canTransitionTo(PluginStatus.SHUTDOWN));
+        assertFalse(PluginStatus.SHUTDOWN.canTransitionTo(PluginStatus.ERROR));
+        // Cover false-branches of OR expressions in ENABLING, DISABLING, SHUTTING_DOWN cases
+        assertFalse(PluginStatus.ENABLING.canTransitionTo(PluginStatus.LOADED));
+        assertFalse(PluginStatus.DISABLING.canTransitionTo(PluginStatus.LOADED));
+        assertFalse(PluginStatus.SHUTTING_DOWN.canTransitionTo(PluginStatus.LOADED));
+        // SHUTDOWN -> false for any state
+        assertFalse(PluginStatus.SHUTDOWN.canTransitionTo(PluginStatus.LOADED));
+    }
 }

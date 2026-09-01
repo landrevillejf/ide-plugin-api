@@ -4,7 +4,14 @@ import java.util.Map;
 
 /**
  * Metrics collection and monitoring service for plugins.
+ * <p>
  * Provides counters, timers, histograms, and gauges for plugin performance monitoring.
+ * Each plugin has its own isolated metric namespace identified by the plugin ID.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginMetricsService {
 

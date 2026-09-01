@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Plugin data persistence service for storing and retrieving plugin-specific data.
+ * <p>
+ * Supports multiple serialization formats, data backup/restore, and storage statistics.
+ * Each plugin has its own isolated data namespace.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginDataStore {
 

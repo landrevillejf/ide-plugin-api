@@ -14,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * @author landrevillejf
  * @version 1.0.0
+ * @since 1.0.0
  */
 public class ComponentRegistry {
     private final Map<String, ComponentEntry> componentsByID = new ConcurrentHashMap<>();
@@ -97,22 +98,17 @@ public class ComponentRegistry {
             return false;
         }
 
-        ComponentEntry removed = componentsByID.remove(componentId);
-        if (removed != null) {
-            List<ComponentEntry> typeList = componentsByType.get(removed.getComponent().getType());
-            if (typeList != null) {
-                typeList.remove(entry);
-                if (typeList.isEmpty()) {
-                    componentsByType.remove(removed.getComponent().getType());
-                }
-            }
-
-            // Notify listeners
-            listeners.forEach(l -> l.onComponentUnregistered(removed.getComponent(), pluginId));
-            return true;
+        componentsByID.remove(componentId);
+        // The type list always exists: registerComponent populates both maps together
+        List<ComponentEntry> typeList = componentsByType.get(entry.getComponent().getType());
+        typeList.remove(entry);
+        if (typeList.isEmpty()) {
+            componentsByType.remove(entry.getComponent().getType());
         }
 
-        return false;
+        // Notify listeners
+        listeners.forEach(l -> l.onComponentUnregistered(entry.getComponent(), pluginId));
+        return true;
     }
 
     /**

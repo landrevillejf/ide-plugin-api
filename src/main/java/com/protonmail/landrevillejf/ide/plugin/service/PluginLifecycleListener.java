@@ -2,6 +2,14 @@ package com.protonmail.landrevillejf.ide.plugin.service;
 
 /**
  * Plugin lifecycle listener interface for monitoring plugin state changes.
+ * <p>
+ * Provides callback methods for all lifecycle transitions including load,
+ * initialize, enable, disable, unload, and upgrade events.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginLifecycleListener {
 

@@ -23,6 +23,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Default implementation of {@link PluginUpdateService} that manages plugin updates
  * via HTTP, parses JSON responses, and handles file-based install/rollback operations.
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginUpdateService
  */
 @Slf4j
 public class DefaultPluginUpdateService implements PluginUpdateService {
@@ -174,7 +179,7 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                 return latest;
             }
 
-            updateStatuses.put(pluginId, null);
+            updateStatuses.remove(pluginId);
             if (log.isDebugEnabled()) {
                 log.debug("No updates available for plugin: {}", pluginId);
             }
@@ -339,9 +344,8 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
 
         Map<String, String> pluginStatuses = new LinkedHashMap<>();
         for (Map.Entry<String, UpdateStatus> entry : updateStatuses.entrySet()) {
-            if (entry.getValue() != null) {
-                pluginStatuses.put(entry.getKey(), entry.getValue().name());
-            }
+            // ConcurrentHashMap never stores null values, so no null-check is needed
+            pluginStatuses.put(entry.getKey(), entry.getValue().name());
         }
         stats.put("pluginStatuses", pluginStatuses);
 
@@ -691,7 +695,7 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                     }
                 });
 
-                if (success && !cancelled) {
+                if (success) {
                     currentVersions.put(pluginId, targetVersion.getVersion());
 
                     versionHistory.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>())
@@ -715,12 +719,6 @@ public class DefaultPluginUpdateService implements PluginUpdateService {
                     }
                 }
 
-            } catch (Exception e) {
-                if (log.isErrorEnabled()) {
-                    log.error("Error during update installation for plugin: {}", pluginId, e);
-                }
-                updateStatuses.put(pluginId, UpdateStatus.FAILED);
-                failedCount.incrementAndGet();
             } finally {
                 activeUpdates.remove(pluginId);
                 updateProgress.remove(pluginId);

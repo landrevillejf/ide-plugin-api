@@ -1,10 +1,15 @@
 package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
 import com.protonmail.landrevillejf.ide.plugin.service.PluginLoggingService;
+import com.protonmail.landrevillejf.ide.plugin.utils.LogCapture;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -244,5 +249,56 @@ class DefaultPluginLoggingServiceTest {
 
         assertFalse(logs.stream().anyMatch(log -> log.contains("Debug message")));
         assertTrue(logs.stream().anyMatch(log -> log.contains("Info message")));
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should skip all logging when the service logger is disabled")
+        void shouldCoverLogGuardFalseBranches(@TempDir Path tempDir) throws Exception {
+            TestUtils.withLoggingOffThrowing(DefaultPluginLoggingService.class, () -> {
+                DefaultPluginLoggingService silentService = new DefaultPluginLoggingService();
+                silentService.setLogLevel(TEST_PLUGIN, PluginLoggingService.LogLevel.TRACE);
+                silentService.log(TEST_PLUGIN, PluginLoggingService.LogLevel.TRACE, "trace");
+                silentService.log(TEST_PLUGIN, PluginLoggingService.LogLevel.DEBUG, "debug");
+                silentService.log(TEST_PLUGIN, PluginLoggingService.LogLevel.INFO, "info");
+                silentService.log(TEST_PLUGIN, PluginLoggingService.LogLevel.WARN, "warn");
+                silentService.log(TEST_PLUGIN, PluginLoggingService.LogLevel.ERROR, "error");
+                silentService.log(TEST_PLUGIN, PluginLoggingService.LogLevel.ERROR, "error with cause",
+                        new IllegalStateException("cause"));
+                silentService.log(TEST_PLUGIN, PluginLoggingService.LogLevel.FATAL, "fatal");
+                silentService.clearLogs(TEST_PLUGIN);
+                silentService.setConsoleOutput(TEST_PLUGIN, false);
+
+                Path validLog = tempDir.resolve("silent.log");
+                silentService.setFileOutput(TEST_PLUGIN, true, validLog.toString());
+
+                // Parent does not exist but can be created -> mkdirs succeeds (no warning)
+                silentService.setFileOutput(TEST_PLUGIN, true,
+                        tempDir.resolve("created-dir/silent.log").toString());
+
+                File blockingFile = tempDir.resolve("blocked-parent.txt").toFile();
+                assertTrue(blockingFile.createNewFile());
+                silentService.setFileOutput(TEST_PLUGIN, true,
+                        new File(blockingFile, "child/silent.log").getAbsolutePath());
+
+                // Pointing at a directory makes FileWriter fail
+                silentService.setFileOutput(TEST_PLUGIN, true, tempDir.toString());
+            });
+        }
+
+        @Test
+        @DisplayName("Should warn when the log directory cannot be created")
+        void shouldWarnWhenLogDirectoryCannotBeCreated(@TempDir Path tempDir) throws IOException {
+            File blockingFile = tempDir.resolve("blocked-parent.txt").toFile();
+            assertTrue(blockingFile.createNewFile());
+            String impossiblePath = new File(blockingFile, "child/test.log").getAbsolutePath();
+
+            try (LogCapture ignored = LogCapture.attach(DefaultPluginLoggingService.class)) {
+                loggingService.setFileOutput(TEST_PLUGIN, true, impossiblePath);
+            }
+        }
     }
 }

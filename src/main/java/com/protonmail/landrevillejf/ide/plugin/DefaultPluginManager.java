@@ -17,6 +17,18 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of the PluginManager interface.
+ * <p>
+ * This class manages plugin lifecycle operations including loading, enabling,
+ * disabling, and unloading plugins from JAR files. It maintains plugin state
+ * and coordinates with the service registry and event bus.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 @Slf4j
 public final class DefaultPluginManager implements PluginManager {
     private final ServiceRegistry serviceRegistry;
@@ -32,6 +44,14 @@ public final class DefaultPluginManager implements PluginManager {
     private static final String PLUGIN_CLASS_ATTRIBUTE = "plugin.class";
     private static final String MANIFEST_PLUGIN_CLASS = "Plugin-Class";
 
+    /**
+     * Creates a new DefaultPluginManager.
+     *
+     * @param serviceRegistry the application service registry
+     * @param eventBus the application event bus
+     * @param context the plugin context
+     * @param pluginsDirectoryPath the path to the plugins directory, or null
+     */
     public DefaultPluginManager(ServiceRegistry serviceRegistry,
                                 EventBus eventBus,
                                 PluginContext context,
@@ -47,6 +67,11 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Sets the plugins directory and creates it if it doesn't exist.
+     *
+     * @param path the path to the plugins directory, or null to clear
+     */
     public void setPluginsDirectory(String path) {
         if (path == null) {
             this.pluginsDirectory = null;
@@ -61,6 +86,13 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Loads a plugin descriptor from a JAR file's manifest.
+     *
+     * @param jarFile the JAR file to load the descriptor from
+     * @return the plugin descriptor
+     * @throws Exception if the descriptor cannot be loaded
+     */
     private PluginDescriptor loadDescriptor(File jarFile) throws Exception {
         try (JarFile jar = new JarFile(jarFile)) {
             Manifest manifest = jar.getManifest();
@@ -77,12 +109,24 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Returns a copy of the loaded plugins map.
+     *
+     * @return a map of plugin names to plugin instances
+     */
     public Map<String, Plugin> getPlugins() {
         synchronized (plugins) {
             return new HashMap<>(plugins);
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Unloads all plugins, cleans up temporary files, and shuts down
+     * the application event bus.
+     * </p>
+     */
     @Override
     public void shutdownAll() {
         if (log.isDebugEnabled()) {
@@ -93,6 +137,9 @@ public final class DefaultPluginManager implements PluginManager {
         eventBus.shutdown();
     }
 
+    /**
+     * Cleans up temporary plugin files.
+     */
     private void cleanupTemporaryFiles() {
         for (File tempFile : temporaryPluginFiles) {
             try {
@@ -112,6 +159,13 @@ public final class DefaultPluginManager implements PluginManager {
         temporaryPluginFiles.clear();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Delegates to {@link #loadPluginsFromDirectory()} to scan the
+     * configured plugins directory for JAR files.
+     * </p>
+     */
     @Override
     public void loadAllPlugins() {
         loadPluginsFromDirectory();
@@ -122,6 +176,9 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Loads all JAR plugins from the configured plugins directory.
+     */
     private void loadPluginsFromDirectory() {
         if (pluginsDirectory == null) {
             if (log.isWarnEnabled()) {
@@ -169,6 +226,11 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Loads all JAR plugins from a specific directory.
+     *
+     * @param pluginsDirectory the directory containing plugin JARs
+     */
     public void loadPlugins(String pluginsDirectory) {
         // Vérifier si le paramètre est null
         if (pluginsDirectory == null) {
@@ -199,6 +261,11 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Unloads a plugin by its name.
+     *
+     * @param pluginName the name of the plugin to unload
+     */
     public void unloadPlugin(String pluginName) {
         synchronized (plugins) {
             Plugin plugin = plugins.get(pluginName);
@@ -240,6 +307,9 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Unloads all loaded plugins.
+     */
     public void unloadAllPlugins() {
         synchronized (plugins) {
             for (String pluginName : new ArrayList<>(plugins.keySet())) {
@@ -248,6 +318,17 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Loads a plugin from a JAR file.
+     * <p>
+     * This method reads the plugin descriptor, creates a classloader,
+     * instantiates the plugin class, initializes it, and optionally
+     * auto-enables it based on configuration.
+     * </p>
+     *
+     * @param jarFile the JAR file containing the plugin
+     * @throws Exception if the plugin cannot be loaded
+     */
     public void loadPlugin(File jarFile) throws Exception {
         URLClassLoader classLoader = null;
 
@@ -337,11 +418,21 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Map<String, Boolean> getAllPluginStates() {
         return new HashMap<>(pluginEnabledStates);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public Plugin getPlugin(String pluginId) {
         synchronized (plugins) {
@@ -349,6 +440,11 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<Plugin> getLoadedPlugins() {
         synchronized (plugins) {
@@ -356,6 +452,11 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public PluginStatus getPluginStatus(String pluginName) {
         Plugin plugin = findPluginByName(pluginName);
@@ -365,6 +466,13 @@ public final class DefaultPluginManager implements PluginManager {
         return plugin.getState();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Iterates over all loaded plugins and disables each one individually.
+     * Menu providers are unregistered from the service registry.
+     * </p>
+     */
     @Override
     public void disableAllPlugins() {
         if (log.isDebugEnabled()) {
@@ -447,6 +555,9 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Verifies that all plugins are disabled, forcing disable if needed.
+     */
     private void verifyAllPluginsDisabled() {
         if (log.isDebugEnabled()) {
             log.debug("Verifying all plugins are disabled...");
@@ -493,6 +604,9 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Resets all plugin enabled states to disabled.
+     */
     public void resetAllPluginStates() {
         if (log.isDebugEnabled()) {
             log.debug("Resetting all plugin states to DISABLED");
@@ -503,6 +617,15 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Checks the cached enabled-state map first, then falls back to
+     * {@link Plugin#isEnabled()}.
+     * </p>
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public boolean isPluginEnabled(String pluginName) {
         Plugin plugin = findPluginByName(pluginName);
@@ -517,6 +640,14 @@ public final class DefaultPluginManager implements PluginManager {
         return plugin.isEnabled();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Filters all loaded plugins by their enabled state.
+     * </p>
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public List<Plugin> getEnabledPlugins() {
         List<Plugin> allPlugins;
@@ -540,6 +671,16 @@ public final class DefaultPluginManager implements PluginManager {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Disables the plugin, unregisters any {@link MenuProvider}, and
+     * publishes {@link PluginDisabledEvent}.
+     * </p>
+     *
+     * @throws RuntimeException           if disabling fails
+     * @throws IllegalArgumentException   if the plugin is not found
+     */
     @Override
     public void disablePlugin(String pluginName) {
         Plugin plugin = findPluginByName(pluginName);
@@ -590,6 +731,16 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Enables the plugin, registers any {@link MenuProvider}, and
+     * publishes {@link PluginEnabledEvent}.
+     * </p>
+     *
+     * @throws RuntimeException           if enabling fails
+     * @throws IllegalArgumentException   if the plugin is not found
+     */
     @Override
     public void enablePlugin(String pluginName) {
         // Chercher d'abord par la clé exacte dans la map
@@ -646,6 +797,12 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Searches for a plugin by name and enables it if not already enabled.
+     * </p>
+     */
     @Override
     public void enablePluginByName(String pluginName) {
         Plugin plugin = findPluginByName(pluginName);
@@ -701,6 +858,12 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * Finds a plugin by its name.
+     *
+     * @param pluginName the name of the plugin to find
+     * @return the plugin, or {@code null} if not found
+     */
     private Plugin findPluginByName(String pluginName) {
         for (Plugin plugin : plugins.values()) {
             if (plugin.getName().equals(pluginName)) {
@@ -710,6 +873,16 @@ public final class DefaultPluginManager implements PluginManager {
         return null;
     }
 
+    /**
+     * Finds the plugin class name from a JAR file.
+     * <p>
+     * First checks plugin.properties, then falls back to the manifest.
+     * </p>
+     *
+     * @param jarFile the JAR file to search
+     * @return the plugin class name, or {@code null} if not found
+     * @throws Exception if an error occurs while reading the JAR
+     */
     private String findPluginClassName(JarFile jarFile) throws Exception {
         JarEntry entry = jarFile.getJarEntry(PLUGIN_PROPERTIES);
         if (entry != null) {
@@ -750,6 +923,16 @@ public final class DefaultPluginManager implements PluginManager {
         return null;
     }
 
+    /**
+     * Loads and enables a plugin by name from a directory.
+     * <p>
+     * This method searches the directory for a JAR containing a plugin
+     * with the specified name, loads it, and enables it.
+     * </p>
+     *
+     * @param pluginsDir the directory to search for plugins
+     * @param pluginName the name of the plugin to load and enable
+     */
     public void loadAndEnablePluginByName(String pluginsDir, String pluginName) {
         File dir = new File(pluginsDir);
         File[] jarFiles = dir.listFiles(file -> file.getName().endsWith(".jar"));
@@ -807,6 +990,11 @@ public final class DefaultPluginManager implements PluginManager {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * @return {@inheritDoc}
+     */
     @Override
     public PluginContext getPluginContext() {
         return context;

@@ -4,6 +4,14 @@ import java.util.List;
 
 /**
  * Plugin dependency resolution and management service.
+ * <p>
+ * Handles dependency registration, resolution, circular dependency detection,
+ * and dependency graph computation for plugins.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginDependencyResolver {
 

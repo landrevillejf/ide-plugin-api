@@ -9,6 +9,14 @@ import java.util.Map;
 
 /**
  * Utility class for common plugin service operations.
+ * <p>
+ * Provides convenience methods for generating performance reports, health summaries,
+ * backup/restore, diagnostics export, and other cross-service operations.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public final class PluginServiceUtils {
 

@@ -4,7 +4,14 @@ import java.util.Map;
 
 /**
  * Centralized logging service for plugins with configurable levels and output targets.
- * Provides structured logging capabilities for all plugins.
+ * <p>
+ * Provides structured logging capabilities including per-plugin log levels,
+ * console and file output, and log statistics.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginLoggingService {
 

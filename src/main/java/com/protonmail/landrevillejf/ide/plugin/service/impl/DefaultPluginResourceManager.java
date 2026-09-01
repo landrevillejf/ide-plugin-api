@@ -9,6 +9,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginResourceManager}.
+ * <p>
+ * Provides inter-plugin resource sharing with access control, type-based indexing,
+ * audit logging of resource access, and resource lifecycle management.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginResourceManager
+ */
 @Slf4j
 public class DefaultPluginResourceManager implements PluginResourceManager {
 
@@ -69,17 +81,11 @@ public class DefaultPluginResourceManager implements PluginResourceManager {
             return false;
         }
 
-        // Remove from provider index
-        List<String> providerResources = resourcesByProvider.get(pluginId);
-        if (providerResources != null) {
-            providerResources.remove(fullResourceId);
-        }
+        // Remove from provider index (the entry always exists: registerResource creates it)
+        resourcesByProvider.get(pluginId).remove(fullResourceId);
 
-        // Remove from type index
-        List<String> typeResources = resourcesByType.get(removed.getResourceType());
-        if (typeResources != null) {
-            typeResources.remove(fullResourceId);
-        }
+        // Remove from type index (the entry always exists: registerResource creates it)
+        resourcesByType.get(removed.getResourceType()).remove(fullResourceId);
 
         // Remove access grants
         accessGrants.values().forEach(grantSet -> grantSet.remove(fullResourceId));

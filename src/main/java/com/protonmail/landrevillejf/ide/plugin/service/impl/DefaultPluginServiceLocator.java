@@ -6,7 +6,17 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Default implementation of PluginServiceLocator providing all plugin services.
+ * Default implementation of {@link com.protonmail.landrevillejf.ide.plugin.service.PluginServiceLocator}
+ * providing all 13 built-in plugin services.
+ * <p>
+ * Instantiates default implementations for all services and provides
+ * a generic service lookup mechanism with support for custom service registration.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see com.protonmail.landrevillejf.ide.plugin.service.PluginServiceLocator
  */
 public class DefaultPluginServiceLocator implements PluginServiceLocator {
 
@@ -110,6 +120,22 @@ public class DefaultPluginServiceLocator implements PluginServiceLocator {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getService(Class<T> serviceInterface) {
+        // Check built-in services first
+        if (serviceInterface == PluginLoggingService.class) return (T) loggingService;
+        if (serviceInterface == PluginCacheService.class) return (T) cacheService;
+        if (serviceInterface == PluginNotificationService.class) return (T) notificationService;
+        if (serviceInterface == PluginMetricsService.class) return (T) metricsService;
+        if (serviceInterface == PluginPermissionService.class) return (T) permissionService;
+        if (serviceInterface == PluginAsyncTaskExecutor.class) return (T) asyncExecutor;
+        if (serviceInterface == PluginConfigurationValidator.class) return (T) configValidator;
+        if (serviceInterface == PluginHookService.class) return (T) hookService;
+        if (serviceInterface == PluginDataStore.class) return (T) dataStore;
+        if (serviceInterface == PluginResourceManager.class) return (T) resourceManager;
+        if (serviceInterface == PluginDependencyResolver.class) return (T) dependencyResolver;
+        if (serviceInterface == PluginUpdateService.class) return (T) updateService;
+        if (serviceInterface == PluginMonitoringService.class) return (T) monitoringService;
+
+        // Fall back to custom registered services
         Object service = customServices.get(serviceInterface);
         if (service == null) {
             return null;

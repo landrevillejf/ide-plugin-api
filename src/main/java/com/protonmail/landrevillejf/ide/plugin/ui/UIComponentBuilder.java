@@ -9,8 +9,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Fluent builder for creating and registering {@link UIComponent} instances.
+ * <p>
+ * Provides convenience methods for creating tabs, panels, sidebars, toolbar buttons,
+ * and other UI elements that plugins can contribute to the IDE.
+ * </p>
+ *
  * @author landrevillejf
  * @version 1.1.0
+ * @since 1.0.0
+ * @see UIComponent
  */
 @Slf4j
 public class UIComponentBuilder {
@@ -435,10 +443,8 @@ public class UIComponentBuilder {
 
         for (final UIComponent component : this.components) {
             // Ajouter le clientProperty au composant AVANT l'enregistrement
-            final JComponent jComponent = component.getComponent();
-            if (jComponent != null) {
-                jComponent.putClientProperty("ui_component_id", component.getComponentId());
-            }
+            // (UIComponent validation guarantees a non-null Swing component)
+            component.getComponent().putClientProperty("ui_component_id", component.getComponentId());
 
             final boolean success = registerComponent(registry, component);
             if (success) {

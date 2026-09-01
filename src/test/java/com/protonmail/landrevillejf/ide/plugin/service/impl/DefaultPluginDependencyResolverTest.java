@@ -1,7 +1,10 @@
 package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
 import com.protonmail.landrevillejf.ide.plugin.service.PluginDependencyResolver;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -287,5 +290,43 @@ class DefaultPluginDependencyResolverTest {
         resolver.addDependency(PLUGIN_A, PLUGIN_B, "1.+", PluginDependencyResolver.DependencyLevel.REQUIRED);
 
         assertTrue(resolver.isDependencyResolved(PLUGIN_A, PLUGIN_B));
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should skip all logging when the resolver logger is disabled")
+        void shouldCoverLogGuardFalseBranches() throws Exception {
+            TestUtils.withLoggingOffThrowing(DefaultPluginDependencyResolver.class, () -> {
+                DefaultPluginDependencyResolver silentResolver = new DefaultPluginDependencyResolver();
+
+                silentResolver.addDependency(PLUGIN_A, PLUGIN_B, "1.0.0",
+                        PluginDependencyResolver.DependencyLevel.REQUIRED);
+                assertTrue(silentResolver.removeDependency(PLUGIN_A, PLUGIN_B));
+
+                silentResolver.addDependency(PLUGIN_A, PLUGIN_B, "1.0.0",
+                        PluginDependencyResolver.DependencyLevel.REQUIRED);
+                assertFalse(silentResolver.areRequiredDependenciesResolved(PLUGIN_A));
+
+                silentResolver.registerAvailablePlugin(PLUGIN_A, "1.0.0");
+                silentResolver.registerAvailablePlugin(PLUGIN_B, "1.0.0");
+                silentResolver.addDependency(PLUGIN_B, PLUGIN_A, "1.0.0",
+                        PluginDependencyResolver.DependencyLevel.REQUIRED);
+                assertTrue(silentResolver.getResolutionPath(PLUGIN_A).isEmpty());
+
+                // Conflicting dependency that is NOT resolved exercises the
+                // false branch of the conflicting-dependency check
+                silentResolver.addDependency(PLUGIN_A, PLUGIN_C, "1.0.0",
+                        PluginDependencyResolver.DependencyLevel.CONFLICTING);
+                Map<String, Object> validation = silentResolver.validateDependencies(PLUGIN_A);
+                @SuppressWarnings("unchecked")
+                List<String> warnings = (List<String>) validation.get("warnings");
+                assertTrue(warnings.isEmpty());
+
+                silentResolver.unregisterAvailablePlugin(PLUGIN_B);
+            });
+        }
     }
 }

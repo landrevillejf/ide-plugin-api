@@ -227,4 +227,26 @@ class UIComponentTest {
         UIComponent.ComponentType[] types = UIComponent.ComponentType.values();
         assertEquals(8, types.length);
     }
+
+    @Test
+    @DisplayName("Icon accessors and toString should reflect the icon state")
+    void testIconAccessorsAndToStringWithIcon() {
+        UIComponent component = new UIComponent(
+                "icon-component",
+                UIComponent.ComponentType.IDE_TAB,
+                "Icon",
+                testComponent,
+                (String) null
+        );
+
+        assertFalse(component.hasIcon());
+        assertTrue(component.toString().contains("hasIcon=false"));
+
+        Icon icon = new ImageIcon();
+        component.setIcon(icon);
+
+        assertTrue(component.hasIcon());
+        assertSame(icon, component.getIcon());
+        assertTrue(component.toString().contains("hasIcon=true"));
+    }
 }

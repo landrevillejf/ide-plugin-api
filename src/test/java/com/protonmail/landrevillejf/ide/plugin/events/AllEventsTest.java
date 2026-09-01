@@ -471,4 +471,11 @@ class AllEventsTest {
         assertEquals("my-plugin", event.getPluginId());
         assertEquals("TAB", event.getComponentType());
     }
+
+    @Test
+    void testEditorEventsOuterClassInstantiation() {
+        // Covers the implicit default constructor of the EditorEvents outer class
+        EditorEvents instance = new EditorEvents();
+        assertNotNull(instance);
+    }
 }

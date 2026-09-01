@@ -1,6 +1,8 @@
 <configuration>
-    <!-- Keep test output silent by default; individual tests attach a
-         ListAppender programmatically via LogCapture when they need to
-         observe log events. -->
-    <root level="OFF"/>
+    <!-- Enable all log levels with a null appender so isXxxEnabled() guards
+         return true (enabling branch coverage) without generating any output. -->
+    <appender name="NULL" class="ch.qos.logback.core.helpers.NOPAppender"/>
+    <root level="ALL">
+        <appender-ref ref="NULL"/>
+    </root>
 </configuration>

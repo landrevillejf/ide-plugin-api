@@ -2,6 +2,8 @@ package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
 import com.protonmail.landrevillejf.ide.plugin.service.PluginConfigurationValidator;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -298,5 +300,118 @@ class DefaultPluginConfigurationValidatorTest {
         result = validator.validateValue(TEST_PLUGIN, "website", "not-a-url");
         assertFalse(result.isValid());
         assertEquals("INVALID_URL", result.getErrors().get(0).getErrorCode());
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should treat an empty registered schema as having no constraints")
+        void emptySchemaIsAccepted() {
+            validator.registerSchema(TEST_PLUGIN, new HashMap<>());
+
+            assertTrue(validator.validateConfiguration(TEST_PLUGIN, Map.of("anything", 1)).isValid());
+            assertTrue(validator.validateValue(TEST_PLUGIN, "anything", 42).isValid());
+            assertTrue(validator.generateSampleConfiguration(TEST_PLUGIN).isEmpty());
+        }
+
+        @Test
+        @DisplayName("Should skip property based checks when the schema has no properties")
+        void schemaWithoutProperties() {
+            Map<String, Object> schema = new HashMap<>();
+            schema.put("title", "My plugin schema");
+            validator.registerSchema(TEST_PLUGIN, schema);
+
+            assertTrue(validator.validateConfiguration(TEST_PLUGIN, Map.of("a", 1)).isValid());
+            assertTrue(validator.generateSampleConfiguration(TEST_PLUGIN).isEmpty());
+            assertTrue(validator.getValidationRules(TEST_PLUGIN).isEmpty());
+        }
+
+        @Test
+        @DisplayName("Should ignore config fields and schema entries without constraints")
+        void untypedFieldsAndUnknownPaths() {
+            Map<String, Object> schema = new HashMap<>();
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("name", Map.of("type", "string"));
+            properties.put("free", Map.of("description", "no type constraint"));
+            schema.put("properties", properties);
+            validator.registerSchema(TEST_PLUGIN, schema);
+
+            // "extra" has no schema entry and "free" has no type constraint
+            Map<String, Object> config = new HashMap<>();
+            config.put("name", "ok");
+            config.put("free", "anything");
+            config.put("extra", 5);
+            assertTrue(validator.validateConfiguration(TEST_PLUGIN, config).isValid());
+        }
+
+        @Test
+        @DisplayName("Should accept duplicates when uniqueItems is disabled")
+        void uniqueItemsDisabled() {
+            Map<String, Object> schema = new HashMap<>();
+            schema.put("properties", Map.of("items",
+                    Map.of("type", "array", "uniqueItems", false)));
+            validator.registerSchema(TEST_PLUGIN, schema);
+
+            Map<String, Object> config = Map.of("items", List.of("a", "a"));
+            assertTrue(validator.validateConfiguration(TEST_PLUGIN, config).isValid());
+        }
+
+        @Test
+        @DisplayName("Should reject empty strings for email and url formats")
+        void emptyEmailAndUrlAreInvalid() {
+            registerTestSchema();
+
+            PluginConfigurationValidator.ValidationResult email =
+                    validator.validateValue(TEST_PLUGIN, "email", "");
+            assertFalse(email.isValid());
+            assertEquals("INVALID_EMAIL", email.getErrors().get(0).getErrorCode());
+
+            PluginConfigurationValidator.ValidationResult url =
+                    validator.validateValue(TEST_PLUGIN, "website", "");
+            assertFalse(url.isValid());
+            assertEquals("INVALID_URL", url.getErrors().get(0).getErrorCode());
+        }
+
+        @Test
+        @DisplayName("Should resolve paths crossing non-map values as missing")
+        void pathThroughNonMapValue() {
+            registerTestSchema();
+
+            // "name" schema is a map but "name.type" resolves to the "string" scalar
+            PluginConfigurationValidator.ValidationResult result =
+                    validator.validateValue(TEST_PLUGIN, "name.type.sub", "x");
+            assertTrue(result.isValid());
+        }
+
+        @Test
+        @DisplayName("Should merge nested maps, replace scalars and copy new map entries")
+        void mergeWithDefaultsCoversAllCases() {
+            Map<String, Object> schema = new HashMap<>();
+            Map<String, Object> defaults = new HashMap<>();
+            Map<String, Object> nested = new HashMap<>();
+            nested.put("x", 1);
+            defaults.put("a", nested);
+            defaults.put("b", "text");
+            schema.put("default", defaults);
+            validator.registerSchema(TEST_PLUGIN, schema);
+
+            Map<String, Object> partial = new HashMap<>();
+            partial.put("a", Map.of("y", 2));          // merge into existing map
+            partial.put("b", Map.of("n", 1));          // replace a scalar with a map
+            partial.put("c", Map.of("z", 3));          // new map entry (deep copy)
+            partial.put("d", 4);                       // scalar overwrite
+
+            Map<String, Object> merged = validator.mergeWithDefaults(TEST_PLUGIN, partial);
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> mergedA = (Map<String, Object>) merged.get("a");
+            assertEquals(1, mergedA.get("x"));
+            assertEquals(2, mergedA.get("y"));
+            assertEquals(Map.of("n", 1), merged.get("b"));
+            assertEquals(Map.of("z", 3), merged.get("c"));
+            assertEquals(4, merged.get("d"));
+        }
     }
 }

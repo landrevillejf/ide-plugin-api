@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Plugin resource management service for sharing and requesting resources between plugins.
+ * <p>
+ * Enables inter-plugin resource sharing with access control, type-safe retrieval,
+ * and audit logging of resource access patterns.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginResourceManager {
 

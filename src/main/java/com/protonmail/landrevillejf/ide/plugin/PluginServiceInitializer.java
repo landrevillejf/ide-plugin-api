@@ -9,7 +9,16 @@ import java.io.File;
 
 /**
  * Initializes and provides plugin services for the application.
- * This class handles the setup of all plugin services.
+ * <p>
+ * This class handles the setup of all 13 plugin services, creating
+ * an {@link ExtendedPluginContext} with a fully configured {@link PluginServiceLocator}.
+ * When no custom service implementations are registered, stub (no-op) implementations
+ * are provided as defaults.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 @Slf4j
 public class PluginServiceInitializer {
@@ -108,8 +117,13 @@ public class PluginServiceInitializer {
     }
 
     /**
-     * Stub implementation of PluginServiceLocator providing minimal service implementations.
+     * Stub implementation of {@link PluginServiceLocator} providing minimal
+     * no-op service implementations.
+     * <p>
      * This is used when no specific service implementations are provided.
+     * Custom services can be registered via
+     * {@link #registerService(Class, Object)}.
+     * </p>
      */
     public static class StubPluginServiceLocator implements PluginServiceLocator {
         private final java.util.Map<Class<?>, Object> registeredServices = new java.util.concurrent.ConcurrentHashMap<>();
@@ -238,7 +252,11 @@ public class PluginServiceInitializer {
     }
 
     /**
-     * Provider for stub service implementations.
+     * Provider for singleton stub service instances.
+     * <p>
+     * Each field holds a lightweight no-op implementation of the corresponding
+     * service interface, used as a default when no real implementation is available.
+     * </p>
      */
     static class StubServices {
         static final PluginLoggingService LOGGING_SERVICE = new StubLoggingService();

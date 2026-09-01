@@ -276,6 +276,23 @@ class DefaultExtendedPluginContextTest {
     }
 
     @Test
+    void getServiceLocatorAndPluginConstructors_ShouldCoverBothConstructors() {
+        DefaultExtendedPluginContext contextWithPlugin = new DefaultExtendedPluginContext(
+                serviceRegistry,
+                pluginEventBus,
+                applicationEventBus,
+                pluginManager,
+                pluginDataDirectory,
+                pluginId,
+                plugin,
+                serviceLocator
+        );
+
+        assertSame(serviceLocator, contextWithPlugin.getServiceLocator());
+        assertSame(plugin, contextWithPlugin.getPlugin());
+    }
+
+    @Test
     void getService_ShouldReturnServiceFromLocator() {
         // Given
         when(serviceLocator.getService(String.class)).thenReturn("test-service");

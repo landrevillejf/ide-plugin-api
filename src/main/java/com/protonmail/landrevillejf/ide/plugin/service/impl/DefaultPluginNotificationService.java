@@ -13,6 +13,19 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginNotificationService}.
+ * <p>
+ * Provides a rich notification system with typed notifications, priority levels,
+ * actionable notifications, listener support, and automatic UI display via Swing.
+ * Includes periodic cleanup of old notifications.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginNotificationService
+ */
 @Slf4j
 public class DefaultPluginNotificationService implements PluginNotificationService {
 
@@ -223,6 +236,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
     }
 
     private void showInUI(Notification notification) {
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
         SwingUtilities.invokeLater(() -> {
             String iconType = getIconType(notification.getType());
             int optionType = JOptionPane.INFORMATION_MESSAGE;
@@ -257,6 +273,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
     }
 
     private void showInUIWithActions(Notification notification) {
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
         // For notifications with actions, show a custom dialog with buttons
         SwingUtilities.invokeLater(() -> {
             JDialog dialog = new JDialog();
@@ -308,7 +327,7 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
         });
     }
 
-    private void scheduleAutoDismiss(Notification notification) {
+    public void scheduleAutoDismiss(Notification notification) {
         // Auto-dismiss based on priority
         long dismissDelay;
         switch (notification.getPriority()) {
@@ -321,11 +340,9 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
             case HIGH:
                 dismissDelay = TimeUnit.SECONDS.toMillis(10);
                 break;
-            case CRITICAL:
-                dismissDelay = TimeUnit.MINUTES.toMillis(1);
-                break;
             default:
-                dismissDelay = TimeUnit.SECONDS.toMillis(5);
+                // CRITICAL notifications stay the longest
+                dismissDelay = TimeUnit.MINUTES.toMillis(1);
         }
 
         // For notifications with actions, don't auto-dismiss
@@ -367,7 +384,7 @@ public class DefaultPluginNotificationService implements PluginNotificationServi
     /**
      * Implementation of the Notification interface
      */
-    private static class NotificationImpl implements Notification {
+    public static class NotificationImpl implements Notification {
         private final String id;
         private final String pluginId;
         private final NotificationType type;

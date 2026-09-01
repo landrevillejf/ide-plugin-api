@@ -9,6 +9,18 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginHookService}.
+ * <p>
+ * Provides lifecycle hook registration and execution with priority ordering,
+ * cancellation support, execution history tracking, and per-plugin hook management.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginHookService
+ */
 @Slf4j
 public final class DefaultPluginHookService implements PluginHookService {
 
@@ -34,13 +46,11 @@ public final class DefaultPluginHookService implements PluginHookService {
         RegisteredHook hook = new RegisteredHook(hookId, pluginId, hookType, priority, callback);
 
         hooks.put(hookId, hook);
-        hooksByPlugin.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>()).add(hook);
+        List<RegisteredHook> pluginHooks = hooksByPlugin.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>());
+        pluginHooks.add(hook);
 
         // Sort hooks by priority when adding
-        List<RegisteredHook> pluginHooks = hooksByPlugin.get(pluginId);
-        if (pluginHooks != null) {
-            pluginHooks.sort((h1, h2) -> Integer.compare(h2.priority, h1.priority));
-        }
+        pluginHooks.sort((h1, h2) -> Integer.compare(h2.priority, h1.priority));
 
         if (log.isDebugEnabled()) {
             log.debug("Hook registered: plugin={}, type={}, id={}, priority={}",
@@ -57,10 +67,8 @@ public final class DefaultPluginHookService implements PluginHookService {
             return false;
         }
 
-        List<RegisteredHook> pluginHooks = hooksByPlugin.get(hook.pluginId);
-        if (pluginHooks != null) {
-            pluginHooks.remove(hook);
-        }
+        // The entry always exists: registerHookWithPriority creates it
+        hooksByPlugin.get(hook.pluginId).remove(hook);
 
         if (log.isDebugEnabled()) {
             log.debug("Hook unregistered: plugin={}, type={}, id={}",
@@ -338,21 +346,6 @@ public final class DefaultPluginHookService implements PluginHookService {
             this.hookType = hookType;
             this.priority = priority;
             this.callback = callback;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            RegisteredHook that = (RegisteredHook) o;
-            return Objects.equals(id, that.id);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(id);
         }
     }
 

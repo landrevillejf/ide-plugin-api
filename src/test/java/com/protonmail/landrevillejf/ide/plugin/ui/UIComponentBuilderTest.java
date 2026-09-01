@@ -1,14 +1,19 @@
 package com.protonmail.landrevillejf.ide.plugin.ui;
 
 import com.protonmail.landrevillejf.ide.plugin.PluginContext;
+import com.protonmail.landrevillejf.ide.plugin.events.SelectTabEvent;
+import com.protonmail.landrevillejf.ide.plugin.utils.LogCapture;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import com.protonmail.landrevillejf.swingide.core.bus.EventBus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import javax.swing.*;
+import java.lang.reflect.Field;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -583,5 +588,282 @@ class UIComponentBuilderTest {
         boolean result = builder.register(component);
 
         assertFalse(result);
+    }
+
+    @Test
+    @DisplayName("Should return copy from getComponents")
+    void testGetComponentsReturnsCopy() {
+        builder.addTab("tab1", "Tab 1", new JPanel());
+
+        List<UIComponent> components = builder.getComponents();
+        components.clear();
+
+        assertEquals(1, builder.getComponents().size());
+    }
+
+    @Test
+    @DisplayName("Should unregister only matching components")
+    void testUnregisterAllCountsOnlySuccessfulRemovals() {
+        JPanel ownedPanel = new JPanel();
+        JPanel foreignPanel = new JPanel();
+        builder.addTab("owned", "Owned", ownedPanel);
+        builder.addTab("foreign", "Foreign", foreignPanel);
+        builder.registerAll();
+
+        assertTrue(registry.unregisterComponent("foreign", "test-plugin"));
+        registry.registerComponent(builder.getComponents().get(1), "other-plugin");
+
+        int unregistered = builder.unregisterAll();
+
+        assertEquals(1, unregistered);
+        assertFalse(registry.isRegistered("owned"));
+        assertTrue(registry.isRegistered("foreign"));
+    }
+
+    @Test
+    @DisplayName("Should register a reflectively added component with a valid Swing component")
+    void testRegisterAllWithReflectivelyAddedComponent() throws Exception {
+        UIComponent mockComponent = mock(UIComponent.class);
+        when(mockComponent.getComponent()).thenReturn(new JPanel());
+        when(mockComponent.getComponentId()).thenReturn("mock-id");
+        when(mockComponent.getType()).thenReturn(UIComponent.ComponentType.IDE_TAB);
+
+        Field field = UIComponentBuilder.class.getDeclaredField("components");
+        field.setAccessible(true);
+        @SuppressWarnings("unchecked")
+        List<UIComponent> internalComponents = (List<UIComponent>) field.get(builder);
+        internalComponents.add(mockComponent);
+
+        assertEquals(1, builder.registerAll());
+        assertTrue(registry.isRegistered("mock-id"));
+    }
+
+    @Test
+    @DisplayName("Should swallow runtime exception when event bus service lookup fails")
+    void testSelectTabWhenEventBusLookupThrows() {
+        when(mockContext.getService(EventBus.class)).thenThrow(new RuntimeException("boom"));
+
+        assertSame(builder, builder.selectTab("test-tab-id"));
+        verify(mockEventBus, never()).publish(any());
+    }
+
+    // ==================== TESTS D'EXCEPTIONS SUR addComponent ====================
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when adding component with null componentId")
+    void testAddComponentWithNullComponentId() {
+        JPanel panel = new JPanel();
+        assertThrows(IllegalArgumentException.class, () ->
+                builder.addComponent(null, UIComponent.ComponentType.IDE_TAB, "Title", panel, (String) null)
+        );
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when adding component with null type")
+    void testAddComponentWithNullType() {
+        JPanel panel = new JPanel();
+        assertThrows(IllegalArgumentException.class, () ->
+                builder.addComponent("id", null, "Title", panel, (String) null)
+        );
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when adding component with null component")
+    void testAddComponentWithNullComponent() {
+        assertThrows(IllegalArgumentException.class, () ->
+                builder.addComponent("id", UIComponent.ComponentType.IDE_TAB, "Title", null, (String) null)
+        );
+    }
+
+    @Test
+    @DisplayName("Should throw IllegalArgumentException when adding Icon component with null componentId")
+    void testAddIconComponentWithNullComponentId() {
+        JPanel panel = new JPanel();
+        assertThrows(IllegalArgumentException.class, () ->
+                builder.addComponent(null, UIComponent.ComponentType.IDE_TAB, "Title", panel, mock(Icon.class))
+        );
+    }
+
+    // ==================== TESTS POUR LES DIFFÉRENTES SIGNATURES addComponent ====================
+
+    @Test
+    @DisplayName("Should add component with String iconPath and default params")
+    void testAddComponentWithStringIconDefaultParams() {
+        JPanel panel = new JPanel();
+        UIComponentBuilder result = builder.addComponent("comp", UIComponent.ComponentType.IDE_TAB, "Title", panel, "icon.png");
+        assertSame(builder, result);
+        UIComponent comp = builder.getComponents().get(0);
+        assertEquals("icon.png", comp.getIconPath());
+        assertEquals(Integer.MAX_VALUE, comp.getOrder());
+        assertTrue(comp.isRemovable());
+    }
+
+    @Test
+    @DisplayName("Should add component with Icon and default params")
+    void testAddComponentWithIconDefaultParams() {
+        Icon mockIcon = mock(Icon.class);
+        JPanel panel = new JPanel();
+        UIComponentBuilder result = builder.addComponent("comp", UIComponent.ComponentType.IDE_TAB, "Title", panel, mockIcon);
+        assertSame(builder, result);
+        UIComponent comp = builder.getComponents().get(0);
+        assertSame(mockIcon, comp.getIcon());
+        assertEquals(Integer.MAX_VALUE, comp.getOrder());
+        assertTrue(comp.isRemovable());
+    }
+
+    @Test
+    @DisplayName("Should add component with String iconPath, order and removable")
+    void testAddComponentWithStringIconFullParams() {
+        JPanel panel = new JPanel();
+        UIComponentBuilder result = builder.addComponent(
+                "comp", UIComponent.ComponentType.IDE_TAB, "Title", panel, "icon.png", 10, false
+        );
+        assertSame(builder, result);
+        UIComponent comp = builder.getComponents().get(0);
+        assertEquals("icon.png", comp.getIconPath());
+        assertEquals(10, comp.getOrder());
+        assertFalse(comp.isRemovable());
+    }
+
+    @Test
+    @DisplayName("Should add component with Icon, order and removable")
+    void testAddComponentWithIconFullParams() {
+        Icon mockIcon = mock(Icon.class);
+        JPanel panel = new JPanel();
+        UIComponentBuilder result = builder.addComponent(
+                "comp", UIComponent.ComponentType.IDE_TAB, "Title", panel, mockIcon, 20, true
+        );
+        assertSame(builder, result);
+        UIComponent comp = builder.getComponents().get(0);
+        assertSame(mockIcon, comp.getIcon());
+        assertEquals(20, comp.getOrder());
+        assertTrue(comp.isRemovable());
+    }
+
+    // ==================== TESTS DE DÉSINSCRIPTION EN CAS D'ÉCHEC ====================
+
+    @Test
+    @DisplayName("Should return false and not remove from internal list when unregister fails")
+    void testUnregisterComponentFailureDoesNotRemoveFromList() {
+        // Ajouter un composant à la liste interne sans l'enregistrer
+        builder.addTab("test-tab", "Test Tab", new JPanel());
+        // Appeler unregisterComponent échouera car le registry ne le connaît pas
+        boolean result = builder.unregisterComponent("test-tab");
+        assertFalse(result);
+        // Le composant doit toujours être dans la liste interne
+        assertEquals(1, builder.getComponents().size());
+    }
+
+    @Test
+    @DisplayName("Should return false when unregistering a component owned by another plugin")
+    void testUnregisterComponentOwnedByOtherPlugin() {
+        // Enregistrer un composant avec un plugin différent
+        UIComponent foreignComponent = new UIComponent(
+                "foreign",
+                UIComponent.ComponentType.IDE_TAB,
+                "Foreign",
+                new JPanel(),
+                (String) null,
+                0,
+                true
+        );
+        registry.registerComponent(foreignComponent, "other-plugin");
+        assertTrue(registry.isRegistered("foreign"));
+
+        // Notre builder essaie de le désenregistrer
+        boolean result = builder.unregisterComponent("foreign");
+        assertFalse(result);
+        // Le composant doit toujours être dans le registry
+        assertTrue(registry.isRegistered("foreign"));
+    }
+
+    // ==================== TESTS POUR selectTab (publication d'événement) ====================
+
+    @Test
+    @DisplayName("Should publish SelectTabEvent with correct componentId and pluginId")
+    void testSelectTabPublishesEventWithCorrectData() {
+        // Reconfigurer le mock pour qu'il retourne l'EventBus
+        reset(mockContext);
+        when(mockContext.getComponentRegistry()).thenReturn(registry);
+        when(mockContext.getService(EventBus.class)).thenReturn(mockEventBus);
+
+        UIComponentBuilder testBuilder = new UIComponentBuilder(mockContext, "test-plugin");
+
+        testBuilder.selectTab("my-tab-id");
+
+        verify(mockEventBus, times(1)).publish(argThat(event ->
+                event instanceof SelectTabEvent &&
+                        ((SelectTabEvent) event).getComponentId().equals("my-tab-id") &&
+                        ((SelectTabEvent) event).getPluginId().equals("test-plugin")
+        ));
+    }
+
+    @Test
+    @DisplayName("Should register component with Icon successfully")
+    void testRegisterComponentWithIcon() {
+        Icon mockIcon = mock(Icon.class);
+        JPanel panel = new JPanel();
+        builder.addComponent("comp", UIComponent.ComponentType.IDE_TAB, "Title", panel, mockIcon);
+        builder.registerAll();
+        assertTrue(registry.isRegistered("comp"));
+    }
+
+    @Test
+    @DisplayName("Should register component with String iconPath successfully")
+    void testRegisterComponentWithIconPath() {
+        JPanel panel = new JPanel();
+        builder.addComponent("comp", UIComponent.ComponentType.IDE_TAB, "Title", panel, "icon.png");
+        builder.registerAll();
+        assertTrue(registry.isRegistered("comp"));
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should skip all logging when the builder logger is disabled")
+        void shouldCoverLogGuardFalseBranches() {
+            TestUtils.withLoggingOff(UIComponentBuilder.class, () -> {
+                // addComponent debug guards (icon-path and Icon variants)
+                builder.addComponent("quiet-path", UIComponent.ComponentType.IDE_TAB,
+                        "Quiet", new JPanel(), "icon.png", 1, true);
+                builder.addComponent("quiet-icon", UIComponent.ComponentType.TOOLBAR_BUTTON,
+                        "Quiet", new JButton(), mock(Icon.class), 1, true);
+
+                // IllegalArgumentException catch guards in both variants
+                assertThrows(IllegalArgumentException.class, () -> builder.addComponent(
+                        "  ", UIComponent.ComponentType.IDE_TAB, "Blank", new JPanel(),
+                        "icon.png", 1, true));
+                assertThrows(IllegalArgumentException.class, () -> builder.addComponent(
+                        "  ", UIComponent.ComponentType.IDE_TAB, "Blank", new JPanel(),
+                        mock(Icon.class), 1, true));
+
+                // registerAll: success info guard, then duplicate warn guard
+                builder.clear();
+                builder.addTab("quiet-reg", "Reg", new JPanel());
+                assertEquals(1, builder.registerAll());
+                assertEquals(0, builder.registerAll());
+
+                // unregisterAll: success && isInfoEnabled guard
+                assertEquals(1, builder.unregisterAll());
+
+                // unregisterComponent(String): info guard and warn guard
+                builder.addTab("quiet-unreg", "Unreg", new JPanel());
+                builder.registerAll();
+                assertTrue(builder.unregisterComponent("quiet-unreg"));
+                assertFalse(builder.unregisterComponent("unknown-component"));
+
+                // publishSelectTabEvent: catch debug guard, publish info guard, else guard
+                // Use doReturn to avoid re-invoking the throwing stub inside when(...)
+                doThrow(new RuntimeException("boom"))
+                        .when(mockContext).getService(EventBus.class);
+                builder.selectTab("quiet-tab");
+                doReturn(mockEventBus).when(mockContext).getService(EventBus.class);
+                builder.selectTab("quiet-tab");
+                doReturn(null).when(mockContext).getService(EventBus.class);
+                builder.selectTab("quiet-tab");
+            });
+        }
     }
 }

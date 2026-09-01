@@ -3,8 +3,16 @@ package com.protonmail.landrevillejf.ide.plugin.ui;
 import java.util.List;
 
 /**
+ * Interface for plugins that contribute UI components to the IDE.
+ * <p>
+ * Plugins implementing this interface can provide tabs, panels, toolbar buttons,
+ * and other UI elements. Supports lifecycle management callbacks.
+ * </p>
+ *
  * @author landrevillejf
  * @version 1.1.0
+ * @since 1.0.0
+ * @see UIComponent
  */
 @SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface UIComponentProvider {

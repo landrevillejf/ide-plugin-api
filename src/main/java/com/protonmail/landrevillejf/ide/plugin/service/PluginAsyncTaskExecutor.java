@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Asynchronous task execution service for plugins with thread pooling and task monitoring.
+ * <p>
+ * Supports named tasks, prioritized execution, scheduled and periodic tasks,
+ * as well as task cancellation and per-plugin thread pool configuration.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginAsyncTaskExecutor {
 

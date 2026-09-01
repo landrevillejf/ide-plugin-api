@@ -15,6 +15,18 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Default implementation of {@link PluginLoggingService}.
+ * <p>
+ * Provides centralized logging with per-plugin log levels, console and file output,
+ * and log statistics tracking. Uses thread-safe collections for concurrent access.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginLoggingService
+ */
 @Slf4j
 public final class DefaultPluginLoggingService implements PluginLoggingService {
 

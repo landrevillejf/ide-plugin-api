@@ -11,22 +11,47 @@ import javax.swing.*;
 import java.util.concurrent.*;
 
 /**
- * Utilitaire pour que les plugins ajoutent facilement des panneaux
+ * Utility class for plugins to easily add and remove panels from the IDE.
+ * <p>
+ * Provides both asynchronous and synchronous methods for panel management,
+ * communicating with the IDE through an event bus. Includes timeout handling
+ * and typed panel region support.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 @Slf4j
 public class PanelUtil {
 
     private final EventBus eventBus;
     private final String pluginId;
-    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduledExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "panel-util-scheduler");
+        t.setDaemon(true);
+        return t;
+    });
 
+    /**
+     * Creates a new PanelUtil instance.
+     *
+     * @param eventBus the event bus for communicating with the IDE
+     * @param pluginId the identifier of the plugin using this utility
+     */
     public PanelUtil(final EventBus eventBus, final String pluginId) {
         this.eventBus = eventBus;
         this.pluginId = pluginId;
     }
 
     /**
-     * Ajoute un panneau de façon asynchrone (String location, pour compatibilité)
+     * Adds a panel asynchronously (String location, for backward compatibility).
+     *
+     * @param title the panel title
+     * @param icon the panel icon
+     * @param panel the Swing panel to add
+     * @param location the location string (e.g., "left", "right", "bottom", "center")
+     * @return a future that completes with true if the panel was added successfully
      */
     public CompletableFuture<Boolean> addPanel(final String title, final Icon icon, final JPanel panel, final String location) {
         final CompletableFuture<Boolean> future = new CompletableFuture<>();
@@ -42,7 +67,13 @@ public class PanelUtil {
     }
 
     /**
-     * Ajoute un panneau de façon asynchrone en utilisant une région typée.
+     * Adds a panel asynchronously using a typed panel region.
+     *
+     * @param title the panel title
+     * @param icon the panel icon
+     * @param panel the Swing panel to add
+     * @param region the typed panel region
+     * @return a future that completes with true if the panel was added successfully
      */
     public CompletableFuture<Boolean> addPanel(final String title, final Icon icon, final JPanel panel, final IdePanelRegion region) {
         final String location = toLocation(region);
@@ -50,7 +81,13 @@ public class PanelUtil {
     }
 
     /**
-     * Ajoute un panneau de façon synchrone (String location, pour compatibilité)
+     * Adds a panel synchronously (String location, for backward compatibility).
+     *
+     * @param title the panel title
+     * @param icon the panel icon
+     * @param panel the Swing panel to add
+     * @param location the location string
+     * @return true if the panel was added successfully
      */
     public boolean addPanelSync(final String title, final Icon icon, final JPanel panel, final String location) {
         final CompletableFuture<Boolean> future = addPanel(title, icon, panel, location);
@@ -58,7 +95,13 @@ public class PanelUtil {
     }
 
     /**
-     * Ajoute un panneau de façon synchrone en utilisant une région typée.
+     * Adds a panel synchronously using a typed panel region.
+     *
+     * @param title the panel title
+     * @param icon the panel icon
+     * @param panel the Swing panel to add
+     * @param region the typed panel region
+     * @return true if the panel was added successfully
      */
     public boolean addPanelSync(final String title, final Icon icon, final JPanel panel, final IdePanelRegion region) {
         final String location = toLocation(region);
@@ -66,14 +109,16 @@ public class PanelUtil {
     }
 
     /**
-     * Supprime un panneau
+     * Removes a panel by its identifier.
+     *
+     * @param panelId the panel identifier to remove
      */
     public void removePanel(final String panelId) {
         eventBus.publish(new PanelRemoveRequest(pluginId, panelId));
     }
 
     /**
-     * Supprime tous les panneaux de ce plugin (à implémenter ultérieurement si besoin)
+     * Removes all panels contributed by this plugin.
      */
     public void removeAllPanels() {
         // Cette méthode nécessite que le PanelManager ait une méthode pour ça
@@ -98,6 +143,11 @@ public class PanelUtil {
         }
     }
 
+    /**
+     * Generates a unique panel identifier.
+     *
+     * @return a unique panel ID string
+     */
     public String generatePanelId() {
         return pluginId + "-" + System.currentTimeMillis();
     }
@@ -156,7 +206,7 @@ public class PanelUtil {
             case LEFT -> "left";
             case RIGHT -> "right";
             case BOTTOM -> "bottom";
-            case CENTER -> "center";
+            // CENTER is the default placement
             default -> "center";
         };
     }

@@ -193,14 +193,18 @@ class ComponentRegistryTest {
 
     private static class TestListener implements ComponentRegistry.ComponentRegistryListener {
         public boolean wasNotified = false;
+        public boolean unregisterNotified = false;
+        public int registerCount = 0;
 
         @Override
         public void onComponentRegistered(UIComponent component, String pluginId) {
             wasNotified = true;
+            registerCount++;
         }
 
         @Override
         public void onComponentUnregistered(UIComponent component, String pluginId) {
+            unregisterNotified = true;
         }
     }
 
@@ -253,5 +257,60 @@ class ComponentRegistryTest {
         assertThrows(IllegalArgumentException.class, () ->
                 registry.registerComponent(testComponent, null)
         );
+    }
+
+    @Test
+    @DisplayName("Should reject blank plugin ID")
+    void testRejectBlankPluginId() {
+        assertThrows(IllegalArgumentException.class, () ->
+                registry.registerComponent(testComponent, "   ")
+        );
+    }
+
+    @Test
+    @DisplayName("Should reject unregister from another plugin")
+    void testUnregisterComponentFromWrongPlugin() {
+        registry.registerComponent(testComponent, "owner-plugin");
+
+        boolean removed = registry.unregisterComponent("test-component", "other-plugin");
+
+        assertFalse(removed);
+        assertTrue(registry.isRegistered("test-component"));
+    }
+
+    @Test
+    @DisplayName("Should notify listener on unregister and support listener removal")
+    void testListenerUnregisterAndRemove() {
+        TestListener listener = new TestListener();
+        registry.addListener(listener);
+        registry.registerComponent(testComponent, "test-plugin");
+
+        assertTrue(registry.unregisterComponent("test-component", "test-plugin"));
+        assertTrue(listener.unregisterNotified);
+
+        registry.removeListener(listener);
+        registry.registerComponent(testComponent, "test-plugin");
+        assertEquals(1, listener.registerCount);
+    }
+
+    @Test
+    @DisplayName("Should return unmodifiable views")
+    void testReturnedCollectionsAreUnmodifiable() {
+        registry.registerComponent(testComponent, "test-plugin");
+
+        assertThrows(UnsupportedOperationException.class, () -> registry.getAllComponents().clear());
+        assertThrows(UnsupportedOperationException.class, () ->
+                registry.getComponentsByType(UIComponent.ComponentType.IDE_TAB).add(testComponent));
+    }
+
+    @Test
+    @DisplayName("Should ignore null listeners")
+    void testAddNullListenerIsIgnored() {
+        registry.addListener(null);
+        registry.removeListener(null);
+
+        // Registration still works and does not notify the rejected listener
+        registry.registerComponent(testComponent, "test-plugin");
+        assertTrue(registry.isRegistered("test-component"));
     }
 }

@@ -4,13 +4,19 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 @Isolated
 class PluginManagerProviderTest {
@@ -361,5 +367,23 @@ class PluginManagerProviderTest {
         // Then
         assertFalse(pluginManager.isPluginEnabled(plugin1));
         assertTrue(pluginManager.isPluginEnabled(plugin2));
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void getInstance_ShouldReturnServiceLoaderImplementation_WhenAvailable() {
+        // Given - a PluginManager implementation discovered via ServiceLoader
+        PluginManager discovered = mock(PluginManager.class);
+        try (MockedStatic<ServiceLoader> loaderStatic = Mockito.mockStatic(ServiceLoader.class)) {
+            ServiceLoader<PluginManager> loader = mock(ServiceLoader.class);
+            loaderStatic.when(() -> ServiceLoader.load(PluginManager.class)).thenReturn(loader);
+            when(loader.iterator()).thenReturn(Collections.singletonList(discovered).iterator());
+
+            // When
+            PluginManager instance = PluginManagerProvider.getInstance();
+
+            // Then - the first ServiceLoader implementation wins
+            assertSame(discovered, instance);
+        }
     }
 }

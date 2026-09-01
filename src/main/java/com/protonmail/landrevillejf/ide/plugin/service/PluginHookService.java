@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Plugin hook registry and execution service for lifecycle and event hooks.
+ * <p>
+ * Supports hook registration with priority, ordered execution, cancellation,
+ * and execution history tracking.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginHookService {
 

@@ -531,4 +531,28 @@ class SecurePluginClassLoaderTest {
             assertSame(string1, string2);
         }
     }
+
+    @Nested
+    @DisplayName("Array type fallback")
+    class ArrayFallbackTests {
+
+        @Test
+        @DisplayName("Should fall back to system classloader when parent cannot load array type")
+        void testLoadArrayClass_FallbackToSystemClassLoader() throws ClassNotFoundException {
+            // Parent that refuses every class, forcing the CNFE catch branch
+            ClassLoader failingParent = new ClassLoader(null) {
+                @Override
+                public Class<?> loadClass(String name) throws ClassNotFoundException {
+                    throw new ClassNotFoundException("parent refuses: " + name);
+                }
+            };
+            SecurePluginClassLoader loader =
+                    new SecurePluginClassLoader(new URL[0], failingParent);
+
+            // "[Ljava.lang.String;" is the binary name of String[]
+            Class<?> arrayClass = loader.loadClass("[Ljava.lang.String;");
+
+            assertEquals(String[].class, arrayClass);
+        }
+    }
 }

@@ -1,7 +1,10 @@
 package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
 import com.protonmail.landrevillejf.ide.plugin.service.PluginMetricsService;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -272,5 +275,40 @@ class DefaultPluginMetricsServiceTest {
         @SuppressWarnings("unchecked")
         Map<String, Long> distribution = (Map<String, Long>) stats.get("distribution");
         assertNotNull(distribution);
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should skip logging when the metrics logger is disabled")
+        void shouldCoverLogGuardFalseBranches() throws Exception {
+            TestUtils.withLoggingOffThrowing(DefaultPluginMetricsService.class, () -> {
+                DefaultPluginMetricsService silentService = new DefaultPluginMetricsService();
+                silentService.incrementCounter(TEST_PLUGIN, METRIC_NAME);
+                silentService.decrementCounter(TEST_PLUGIN, METRIC_NAME);
+                silentService.recordTimer(TEST_PLUGIN, METRIC_NAME, 42);
+                silentService.recordHistogram(TEST_PLUGIN, METRIC_NAME, 7);
+                silentService.setGauge(TEST_PLUGIN, METRIC_NAME, 99);
+                silentService.resetMetric(TEST_PLUGIN, METRIC_NAME);
+                silentService.resetMetrics(TEST_PLUGIN);
+            });
+        }
+
+        @Test
+        @DisplayName("Should fall through metric maps until the matching type is found")
+        void getMetricStatisticsShouldSkipNonMatchingMaps() {
+            metricsService.incrementCounter(TEST_PLUGIN, "counter-metric");
+            metricsService.recordTimer(TEST_PLUGIN, "timer-metric", 10);
+            metricsService.recordHistogram(TEST_PLUGIN, "histogram-metric", 5);
+            metricsService.setGauge(TEST_PLUGIN, "gauge-metric", 3);
+
+            Map<String, Object> stats = metricsService.getMetricStatistics(TEST_PLUGIN, "gauge-metric");
+            assertEquals("GAUGE", stats.get("type"));
+
+            assertTrue(metricsService.getMetricStatistics(TEST_PLUGIN, "missing-metric").isEmpty());
+            assertTrue(metricsService.getMetricStatistics(TEST_PLUGIN_2, "missing-metric").isEmpty());
+        }
     }
 }

@@ -11,6 +11,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginMetricsService}.
+ * <p>
+ * Provides counters, timers, histograms, and gauges for per-plugin performance monitoring.
+ * Uses {@link LongAdder} for high-throughput counter operations and thread-safe maps
+ * for concurrent metric access.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginMetricsService
+ */
 @Slf4j
 public class DefaultPluginMetricsService implements PluginMetricsService {
 
@@ -143,7 +156,8 @@ public class DefaultPluginMetricsService implements PluginMetricsService {
                 return pluginHistograms.entrySet().stream()
                         .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getStatistics()));
             }
-        } else if (type == MetricType.GAUGE) {
+        } else {
+            // GAUGE is the only remaining metric type
             Map<String, GaugeMetric> pluginGauges = gauges.get(pluginId);
             if (pluginGauges != null) {
                 return pluginGauges.entrySet().stream()

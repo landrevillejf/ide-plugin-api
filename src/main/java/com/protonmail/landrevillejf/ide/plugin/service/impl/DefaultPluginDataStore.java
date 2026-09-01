@@ -17,6 +17,18 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * Default implementation of {@link PluginDataStore}.
+ * <p>
+ * Provides persistent file-based data storage for plugins with support for JSON and XML
+ * serialization, backup/restore, bulk import/export, and Zip Slip vulnerability prevention.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginDataStore
+ */
 @Slf4j
 public class DefaultPluginDataStore implements PluginDataStore {
 

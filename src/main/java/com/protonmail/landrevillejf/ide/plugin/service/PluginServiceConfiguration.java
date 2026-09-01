@@ -4,7 +4,14 @@ import java.util.Map;
 
 /**
  * Configuration builder for plugin services.
- * Provides fluent API to configure and create service instances.
+ * <p>
+ * Provides a fluent API to configure and create service instances, allowing
+ * customization of all 13 plugin services through a builder pattern.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginServiceConfiguration {
 

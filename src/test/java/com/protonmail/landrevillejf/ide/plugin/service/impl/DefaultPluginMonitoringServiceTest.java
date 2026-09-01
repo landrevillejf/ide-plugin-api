@@ -1,7 +1,10 @@
 package com.protonmail.landrevillejf.ide.plugin.service.impl;
 
 import com.protonmail.landrevillejf.ide.plugin.service.PluginMonitoringService;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -743,6 +746,56 @@ class DefaultPluginMonitoringServiceTest {
                 .getDeclaredMethod("updateAllHealthReports");
         updateMethod.setAccessible(true);
         updateMethod.invoke(monitoringService);
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        @Test
+        @DisplayName("Should skip all logging when the monitoring logger is disabled")
+        void shouldCoverLogGuardFalseBranches() throws Exception {
+            TestUtils.withLoggingOffThrowing(DefaultPluginMonitoringService.class, () -> {
+                // Constructor log guard
+                DefaultPluginMonitoringService quietService = new DefaultPluginMonitoringService();
+
+                // Registration lifecycle log guards
+                quietService.registerPlugin(TEST_PLUGIN);
+                quietService.markPluginOffline(TEST_PLUGIN);
+                quietService.markPluginOnline(TEST_PLUGIN);
+                quietService.unregisterPlugin(TEST_PLUGIN);
+
+                // Listener registration log guards
+                PluginMonitoringService.HealthMonitorListener listener =
+                        new PluginMonitoringService.HealthMonitorListener() {
+                            @Override
+                            public void onAlertCreated(PluginMonitoringService.Alert alert) {}
+
+                            @Override
+                            public void onAlertResolved(PluginMonitoringService.Alert alert) {}
+
+                            @Override
+                            public void onHealthChanged(PluginMonitoringService.HealthReport report) {}
+                        };
+                quietService.registerHealthMonitorListener(listener);
+                quietService.unregisterHealthMonitorListener(listener);
+
+                // Severity log guards and resolve guard
+                for (PluginMonitoringService.AlertSeverity severity
+                        : PluginMonitoringService.AlertSeverity.values()) {
+                    PluginMonitoringService.Alert alert = quietService.createAlert(
+                            TEST_PLUGIN, severity, "Title", "Message");
+                    quietService.resolveAlert(alert.getAlertId());
+                }
+
+                // clearAlertHistory and cleanupOldAlerts log guards
+                quietService.clearAlertHistory();
+                java.lang.reflect.Method cleanup = DefaultPluginMonitoringService.class
+                        .getDeclaredMethod("cleanupOldAlerts");
+                cleanup.setAccessible(true);
+                cleanup.invoke(quietService);
+            });
+        }
     }
 
 }

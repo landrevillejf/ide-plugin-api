@@ -2,6 +2,14 @@ package com.protonmail.landrevillejf.ide.plugin.ui.listener;
 
 /**
  * Listener for build events from the BuildManager.
+ * <p>
+ * Provides callbacks for build lifecycle events including start, progress,
+ * completion, failure, and cancellation.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface BuildListener {
     /**

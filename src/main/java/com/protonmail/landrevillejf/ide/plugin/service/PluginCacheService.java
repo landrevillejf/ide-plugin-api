@@ -5,6 +5,14 @@ import java.util.Map;
 
 /**
  * Caching service for plugins with support for TTL, eviction policies, and statistics.
+ * <p>
+ * Each plugin has its own isolated cache namespace identified by the plugin ID.
+ * Supports configurable eviction policies (LRU, FIFO, LFU) and maximum cache sizes.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginCacheService {
 

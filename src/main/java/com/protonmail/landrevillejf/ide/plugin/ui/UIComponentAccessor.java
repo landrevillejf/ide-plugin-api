@@ -6,8 +6,16 @@ import javax.swing.*;
 import java.io.File;
 
 /**
- * Accessor to allow plugins to interact with IDE UI components.
- * This interface is implemented by MainWindow and exposed to plugins via PluginContext.
+ * Accessor interface that allows plugins to interact with IDE UI components.
+ * <p>
+ * Implemented by the host IDE's main window and exposed to plugins via
+ * {@link com.protonmail.landrevillejf.ide.plugin.PluginContext}. Provides access
+ * to tab panes, project explorer, structure panel, file operations, and more.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface UIComponentAccessor {
     // ============ BASIC UI COMPONENTS ============

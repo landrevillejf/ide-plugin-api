@@ -132,6 +132,97 @@ class DefaultPluginServiceLocatorTest {
     }
 
     @Test
+    void getServiceBuiltInLogging() {
+        PluginLoggingService service = serviceLocator.getService(PluginLoggingService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getLoggingService(), service);
+    }
+
+    @Test
+    void getServiceBuiltInCache() {
+        PluginCacheService service = serviceLocator.getService(PluginCacheService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getCacheService(), service);
+    }
+
+    @Test
+    void getServiceBuiltInNotification() {
+        PluginNotificationService service = serviceLocator.getService(PluginNotificationService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getNotificationService(), service);
+    }
+
+    @Test
+    void getServiceBuiltInMetrics() {
+        PluginMetricsService service = serviceLocator.getService(PluginMetricsService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getMetricsService(), service);
+    }
+
+    @Test
+    void getServiceBuiltInPermission() {
+        PluginPermissionService service = serviceLocator.getService(PluginPermissionService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getPermissionService(), service);
+    }
+
+    @Test
+    void getServiceBuiltInAsyncExecutor() {
+        PluginAsyncTaskExecutor service = serviceLocator.getService(PluginAsyncTaskExecutor.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getAsyncTaskExecutor(), service);
+    }
+
+    @Test
+    void getServiceBuiltInConfigValidator() {
+        PluginConfigurationValidator service = serviceLocator.getService(PluginConfigurationValidator.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getConfigurationValidator(), service);
+    }
+
+    @Test
+    void getServiceBuiltInHook() {
+        PluginHookService service = serviceLocator.getService(PluginHookService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getHookService(), service);
+    }
+
+    @Test
+    void getServiceBuiltInDataStore() {
+        PluginDataStore service = serviceLocator.getService(PluginDataStore.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getDataStore(), service);
+    }
+
+    @Test
+    void getServiceBuiltInResourceManager() {
+        PluginResourceManager service = serviceLocator.getService(PluginResourceManager.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getResourceManager(), service);
+    }
+
+    @Test
+    void getServiceBuiltInDependencyResolver() {
+        PluginDependencyResolver service = serviceLocator.getService(PluginDependencyResolver.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getDependencyResolver(), service);
+    }
+
+    @Test
+    void getServiceBuiltInUpdateService() {
+        PluginUpdateService service = serviceLocator.getService(PluginUpdateService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getUpdateService(), service);
+    }
+
+    @Test
+    void getServiceBuiltInMonitoringService() {
+        PluginMonitoringService service = serviceLocator.getService(PluginMonitoringService.class);
+        assertNotNull(service);
+        assertSame(serviceLocator.getMonitoringService(), service);
+    }
+
+    @Test
     void getNonExistentService() {
         NonExistentService service = serviceLocator.getService(NonExistentService.class);
 

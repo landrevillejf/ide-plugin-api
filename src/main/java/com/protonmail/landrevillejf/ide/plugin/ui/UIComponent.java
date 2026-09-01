@@ -15,6 +15,7 @@ import java.io.Serializable;
  *
  * @author landrevillejf
  * @version 1.1.0
+ * @since 1.0.0
  */
 @Getter
 public class UIComponent implements Serializable {

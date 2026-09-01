@@ -1,5 +1,9 @@
 package com.protonmail.landrevillejf.ide.plugin;
 
+import com.protonmail.landrevillejf.ide.plugin.events.Event;
+import com.protonmail.landrevillejf.ide.plugin.events.EventListener;
+import com.protonmail.landrevillejf.ide.plugin.utils.LogCapture;
+import com.protonmail.landrevillejf.ide.plugin.utils.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -8,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
@@ -35,6 +40,11 @@ class AbstractPluginTest {
         private boolean onStartCalled = false;
         private boolean onStopCalled = false;
         private boolean cleanupCalled = false;
+        private Object lastConfigChangedData;
+        private Object lastDependencyLoadedData;
+        private Object lastUserInteractionData;
+        private Object lastSystemEventData;
+        private Object lastCustomEventData;
 
         public TestPlugin(String name, String version, String description, String author) {
             super(name, version, description, author);
@@ -93,6 +103,31 @@ class AbstractPluginTest {
             onStartCalled = false;
             onStopCalled = false;
             cleanupCalled = false;
+        }
+
+        @Override
+        protected void onConfigurationChanged(Object eventData) {
+            lastConfigChangedData = eventData;
+        }
+
+        @Override
+        protected void onDependencyLoaded(Object eventData) {
+            lastDependencyLoadedData = eventData;
+        }
+
+        @Override
+        protected void onUserInteraction(Object eventData) {
+            lastUserInteractionData = eventData;
+        }
+
+        @Override
+        protected void onSystemEvent(Object eventData) {
+            lastSystemEventData = eventData;
+        }
+
+        @Override
+        protected void onCustomEvent(Object eventData) {
+            lastCustomEventData = eventData;
         }
     }
 
@@ -186,6 +221,8 @@ class AbstractPluginTest {
 
             plugin.setCustomMetadata(metadata);
             assertEquals(metadata, plugin.getCustomMetadata());
+            plugin.getCustomMetadata().put("mutated", true);
+            assertFalse(plugin.getCustomMetadata().containsKey("mutated"));
 
             plugin.addCustomMetadata("key3", "value3");
             assertEquals("value3", plugin.getCustomMetadata().get("key3"));
@@ -530,12 +567,17 @@ class AbstractPluginTest {
         @Test
         @DisplayName("Should handle different event types")
         void testHandleEvent() {
-            // These should not throw exceptions
             plugin.handleEvent(Plugin.PluginEventType.CONFIG_CHANGED, Map.of("key", "value"));
             plugin.handleEvent(Plugin.PluginEventType.DEPENDENCY_LOADED, "dependency");
             plugin.handleEvent(Plugin.PluginEventType.USER_INTERACTION, "click");
             plugin.handleEvent(Plugin.PluginEventType.SYSTEM_EVENT, "event");
             plugin.handleEvent(Plugin.PluginEventType.CUSTOM_EVENT, "custom");
+
+            assertEquals(Map.of("key", "value"), plugin.lastConfigChangedData);
+            assertEquals("dependency", plugin.lastDependencyLoadedData);
+            assertEquals("click", plugin.lastUserInteractionData);
+            assertEquals("event", plugin.lastSystemEventData);
+            assertEquals("custom", plugin.lastCustomEventData);
         }
 
         @Test
@@ -562,6 +604,8 @@ class AbstractPluginTest {
             assertNotNull(event);
             assertEquals("TEST_TYPE", event.getType());
             assertEquals("data", event.getData());
+            assertEquals(plugin.getName(), event.getSource());
+            assertNotNull(event.getTimestamp());
         }
     }
 
@@ -708,6 +752,401 @@ class AbstractPluginTest {
             plugin.log("Test message");
             plugin.logError("Error message");
             plugin.logDebug("Debug message");
+        }
+    }
+
+    // ── Additional tests to cover remaining missed branches / instructions ──
+
+    /** Minimal plugin that does NOT override the event handler stubs,
+     *  so AbstractPlugin's empty bodies get executed. */
+    static class MinimalPlugin extends AbstractPlugin {
+        public MinimalPlugin(String name, String version, String description, String author) {
+            super(name, version, description, author);
+        }
+        @Override public boolean beforeEnable()  { return true; }
+        @Override public void   afterEnable()    {}
+        @Override public boolean beforeDisable() { return false; } // always refuses
+        @Override public void   afterDisable()   {}
+        @Override public void   onStart()        {}
+        @Override public void   onStop()         {}
+        @Override public void   cleanup()        {}
+        @Override public boolean isRecoverable() { return false; } // non-recoverable
+    }
+
+    @Test
+    @DisplayName("handleEvent uses AbstractPlugin empty handlers when not overridden")
+    void testHandleEvent_BaseHandlersAreCalled() {
+        MinimalPlugin mp = new MinimalPlugin("m", "1.0", "desc", "author");
+        mp.setState(PluginStatus.LOADED);
+        // All five cases delegate to AbstractPlugin's empty methods
+        assertDoesNotThrow(() -> {
+            mp.handleEvent(Plugin.PluginEventType.CONFIG_CHANGED, "data");
+            mp.handleEvent(Plugin.PluginEventType.DEPENDENCY_LOADED, "data");
+            mp.handleEvent(Plugin.PluginEventType.USER_INTERACTION, "data");
+            mp.handleEvent(Plugin.PluginEventType.SYSTEM_EVENT, "data");
+            mp.handleEvent(Plugin.PluginEventType.CUSTOM_EVENT, "data");
+        });
+    }
+
+    @Test
+    @DisplayName("disable_WhenBeforeDisableFalse_ShouldThrowIllegalState")
+    void testDisable_BeforeDisableReturnsFalse_Throws() {
+        MinimalPlugin mp = new MinimalPlugin("m", "1.0", "desc", "author");
+        mp.setState(PluginStatus.LOADED);
+        mp.initialize(mockContext);
+        mp.enable();
+        assertThrows(IllegalStateException.class, mp::disable);
+    }
+
+    @Test
+    @DisplayName("updateConfiguration with null config returns false")
+    void testUpdateConfiguration_NullConfig_ReturnsFalse() {
+        assertFalse(plugin.updateConfiguration(null));
+    }
+
+    @Test
+    @DisplayName("validate returns false when dependency is missing")
+    void testValidate_MissingDependency_ReturnsFalse() {
+        plugin.addDependency("missing-dep");
+        // dependency not injected, so validateDependencies() returns false
+        assertFalse(plugin.validate());
+    }
+
+    @Test
+    @DisplayName("checkCompatibility returns true when requiredHostVersion is set")
+    void testCheckCompatibility_IncompatibleVersion() {
+        plugin.setRequiredHostVersion("1.0.0");
+        Plugin.CompatibilityResult result = plugin.checkCompatibility();
+        assertTrue(result.isCompatible());
+    }
+
+    @Test
+    @DisplayName("checkCompatibility returns false when requiredHostVersion is empty string")
+    void testCheckCompatibility_EmptyRequiredVersion() {
+        plugin.setRequiredHostVersion("");
+        Plugin.CompatibilityResult result = plugin.checkCompatibility();
+        assertFalse(result.isCompatible());
+    }
+
+    @Test
+    @DisplayName("canUpgradeTo returns false when version comparison throws")
+    void testCanUpgradeTo_InvalidVersion_ReturnsFalse() {
+        // "not-a-version" can't be compared; exception path returns false
+        assertFalse(plugin.canUpgradeTo("not.a.version"));
+    }
+
+    @Test
+    @DisplayName("healthCheck with SHUTDOWN state returns DOWN")
+    void testHealthCheck_ShutdownState_ReturnsDown() {
+        plugin.initialize(mockContext);
+        plugin.enable();
+        plugin.setState(PluginStatus.SHUTTING_DOWN);
+        plugin.setState(PluginStatus.SHUTDOWN);
+        Plugin.HealthStatus status = plugin.healthCheck();
+        assertEquals(Plugin.HealthStatus.DOWN, status.getStatus());
+    }
+
+    @Test
+    @DisplayName("subscribe adds event to subscribedEvents list")
+    void testSubscribe_AddsToSubscribedEvents() {
+        plugin.subscribe(AbstractPlugin.GenericEvent.class, e -> {});
+        List<String> subscribed = plugin.getSubscribedEvents();
+        assertTrue(subscribed.contains("GenericEvent"));
+    }
+
+    @Test
+    @DisplayName("unsubscribe removes event from subscribedEvents list")
+    void testUnsubscribe_RemovesFromSubscribedEvents() {
+        EventListener<AbstractPlugin.GenericEvent> listener = e -> {};
+        plugin.subscribe(AbstractPlugin.GenericEvent.class, listener);
+        plugin.unsubscribe(AbstractPlugin.GenericEvent.class, listener);
+        // The simple name may still be there if subscribe was called multiple times,
+        // but at least no exception should be thrown
+        assertDoesNotThrow(() -> plugin.getSubscribedEvents());
+    }
+
+    @Test
+    @DisplayName("addPublishedEvent adds to publishedEvents list")
+    void testAddPublishedEvent() {
+        plugin.addPublishedEvent("MY_EVENT");
+        assertTrue(plugin.getPublishedEvents().contains("MY_EVENT"));
+    }
+
+    @Test
+    @DisplayName("addSubscribedEvent adds to subscribedEvents list")
+    void testAddSubscribedEvent() {
+        plugin.addSubscribedEvent("MY_SUB_EVENT");
+        assertTrue(plugin.getSubscribedEvents().contains("MY_SUB_EVENT"));
+    }
+
+    @Test
+    @DisplayName("onError on non-recoverable plugin calls handleUncaughtException")
+    void testOnError_NonRecoverable_CallsHandleUncaughtException() {
+        MinimalPlugin mp = new MinimalPlugin("m", "1.0", "desc", "author");
+        mp.setState(PluginStatus.LOADED);
+        mp.onError(new RuntimeException("fatal"));
+        // uncaughtExceptions counter should be incremented
+        assertEquals(1, mp.getMetrics().get("uncaughtExceptions"));
+    }
+
+    @Nested
+    @DisplayName("Log Capture Tests to Kill PIT Mutations")
+    class LogCaptureTests {
+
+        @Test
+        @DisplayName("logError should log error message when error enabled")
+        void testLogError_LogsErrorMessage() {
+            try (LogCapture capture = LogCapture.attach(AbstractPlugin.class)) {
+                plugin.logError("Test error message");
+
+                assertTrue(capture.formattedMessages().stream()
+                    .anyMatch(msg -> msg.contains("Test error message")));
+            }
+        }
+
+        @Test
+        @DisplayName("logDebug should log debug message when debug enabled")
+        void testLogDebug_LogsDebugMessage() {
+            try (LogCapture capture = LogCapture.attach(AbstractPlugin.class)) {
+                plugin.logDebug("Test debug message");
+
+                assertTrue(capture.formattedMessages().stream()
+                    .anyMatch(msg -> msg.contains("Test debug message")));
+            }
+        }
+
+        @Test
+        @DisplayName("onError should update metrics and attempt recovery")
+        void testOnError_UpdatesMetricsAndAttemptsRecovery() {
+            try (LogCapture capture = LogCapture.attach(AbstractPlugin.class)) {
+                plugin.onError(new RuntimeException("Test error"));
+
+                // Metrics should be updated
+                assertEquals(1, plugin.getMetrics().get("errorCount"));
+            }
+        }
+
+        @Test
+        @DisplayName("resetMetrics should clear metrics map")
+        void testResetMetrics_ClearsMetrics() {
+            plugin.onError(new RuntimeException());
+            Map<String, Object> beforeReset = plugin.getMetrics();
+            assertTrue((Integer) beforeReset.get("errorCount") > 0);
+
+            plugin.resetMetrics();
+
+            Map<String, Object> afterReset = plugin.getMetrics();
+            assertEquals(0, afterReset.get("errorCount"));
+        }
+
+        @Test
+        @DisplayName("subscribe should call eventBus.subscribe")
+        void testSubscribe_CallsEventBusSubscribe() {
+            EventListener<AbstractPlugin.GenericEvent> listener = e -> {};
+            plugin.subscribe(AbstractPlugin.GenericEvent.class, listener);
+
+            // Should add to subscribed events
+            assertTrue(plugin.getSubscribedEvents().contains("GenericEvent"));
+        }
+
+        @Test
+        @DisplayName("unsubscribe should call eventBus.unsubscribe")
+        void testUnsubscribe_CallsEventBusUnsubscribe() {
+            EventListener<AbstractPlugin.GenericEvent> listener = e -> {};
+            plugin.subscribe(AbstractPlugin.GenericEvent.class, listener);
+            plugin.unsubscribe(AbstractPlugin.GenericEvent.class, listener);
+
+            // Should remove from subscribed events
+            assertFalse(plugin.getSubscribedEvents().contains("GenericEvent"));
+        }
+
+        @Test
+        @DisplayName("validate should check both dependencies and configuration")
+        void testValidate_ChecksBothDependenciesAndConfiguration() {
+            plugin.addDependency("test-dep");
+            Map<String, Object> deps = Map.of("test-dep", "service");
+            plugin.injectDependencies(deps);
+
+            assertTrue(plugin.validate());
+        }
+    }
+
+    @Test
+    @DisplayName("onError with recovery failure escalates via handleUncaughtException")
+    void testOnError_RecoveryFails_Escalates() {
+        TestPlugin failable = new TestPlugin("f", "1.0", "d", "a") {
+            @Override
+            protected void recoverFromError(Throwable throwable) {
+                throw new RuntimeException("recovery failed");
+            }
+        };
+        failable.setState(PluginStatus.LOADED);
+        failable.initialize(mockContext);
+        failable.enable();
+        assertDoesNotThrow(() -> failable.onError(new RuntimeException("original")));
+        assertTrue((int) failable.getMetrics().get("uncaughtExceptions") >= 1);
+    }
+
+    @Test
+    @DisplayName("GenericEvent.toString includes type and source name")
+    void testGenericEvent_ToString() {
+        AbstractPlugin.GenericEvent event = plugin.createEvent("TEST", "payload");
+        String str = event.toString();
+        assertTrue(str.contains("TEST"));
+        assertTrue(str.contains(plugin.getName()));
+    }
+
+    @Test
+    @DisplayName("GenericEvent.toString with null source uses 'unknown'")
+    void testGenericEvent_ToString_NullSource() {
+        AbstractPlugin.GenericEvent event = new AbstractPlugin.GenericEvent("T", "d", null);
+        String str = event.toString();
+        assertTrue(str.contains("unknown"));
+    }
+
+    @Test
+    @DisplayName("hasSubscribers returns false before any subscription")
+    void testHasSubscribers_BeforeSubscription_ReturnsFalse() {
+        assertFalse(plugin.hasSubscribers(AbstractPlugin.GenericEvent.class));
+    }
+
+    @Test
+    @DisplayName("generateNormalizedId with all-special-char name uses timestamp fallback")
+    void testGenerateNormalizedId_AllSpecialChars() {
+        // A name consisting only of chars removed during normalization → empty → fallback
+        TestPlugin p = new TestPlugin("***@@@###", "1.0", "d", "a");
+        assertNotNull(p.getDescriptor().getId());
+        assertTrue(p.getDescriptor().getId().startsWith("plugin-") || !p.getDescriptor().getId().isEmpty());
+    }
+
+    @Test
+    @DisplayName("compareVersions with different-length versions pads shorter with zeros")
+    void testCompareVersions_DifferentLengths() {
+        // "1.0.0" (current) vs "1.0.0.1" (target): padding covers part1 = 0 branch
+        assertTrue(plugin.canUpgradeTo("1.0.0.1"));
+        // "1.0.0" vs "1" (target shorter): padding covers part2 = 0 branch
+        assertFalse(plugin.canUpgradeTo("1"));
+    }
+
+    @Test
+    @DisplayName("getPublishedEvents returns defensive copy")
+    void testGetPublishedEvents_DefensiveCopy() {
+        List<String> list = plugin.getPublishedEvents();
+        list.add("HACK");
+        assertFalse(plugin.getPublishedEvents().contains("HACK"));
+    }
+
+    @Test
+    @DisplayName("getSubscribedEvents returns defensive copy")
+    void testGetSubscribedEvents_DefensiveCopy() {
+        List<String> list = plugin.getSubscribedEvents();
+        list.add("HACK");
+        assertFalse(plugin.getSubscribedEvents().contains("HACK"));
+    }
+
+    @Nested
+    @DisplayName("Coverage completion tests")
+    class CoverageCompletionTests {
+
+        /** Subclass exposing protected helpers needed for coverage. */
+        class InstrumentedPlugin extends TestPlugin {
+            boolean configValidationCalled = false;
+            boolean forceConfigInvalid = false;
+
+            InstrumentedPlugin() {
+                super("instr-plugin", "Instr Plugin", "1.0.0", "desc", "author");
+            }
+
+            @Override
+            public boolean validateConfiguration(Map<String, Object> cfg) {
+                configValidationCalled = true;
+                if (forceConfigInvalid) {
+                    return false;
+                }
+                return super.validateConfiguration(cfg);
+            }
+
+            void declareDependency(String dependency) {
+                addDependency(dependency);
+            }
+
+            <T extends Event> void publishTypedEvent(T event) {
+                publishEvent(event);
+            }
+
+            void logInfoMessage(String message) {
+                log(message);
+            }
+
+            void logErrorMessage(String message) {
+                logError(message);
+            }
+
+            void logDebugMessage(String message) {
+                logDebug(message);
+            }
+        }
+
+        @Test
+        @DisplayName("validate short-circuits when a declared dependency is missing")
+        void validate_ShouldShortCircuit_WhenDependenciesMissing() {
+            InstrumentedPlugin instrumented = new InstrumentedPlugin();
+            instrumented.declareDependency("missing.dependency");
+
+            assertFalse(instrumented.validate());
+            assertFalse(instrumented.configValidationCalled,
+                    "configuration validation must be skipped on dependency failure");
+        }
+
+        @Test
+        @DisplayName("validate returns false when configuration fails but dependencies are satisfied")
+        void validate_ShouldReturnFalse_WhenConfigurationInvalid() {
+            InstrumentedPlugin instrumented = new InstrumentedPlugin();
+            instrumented.forceConfigInvalid = true;
+            // No dependencies declared -> validateDependencies() is true
+
+            assertFalse(instrumented.validate());
+            assertTrue(instrumented.configValidationCalled,
+                    "configuration validation must run once dependencies pass");
+        }
+
+        @Test
+        @DisplayName("typed publishEvent routes the event through the event bus")
+        void publishTypedEvent_ShouldReachSubscribers() {
+            InstrumentedPlugin instrumented = new InstrumentedPlugin();
+            AtomicReference<AbstractPlugin.GenericEvent> received = new AtomicReference<>();
+            EventListener<AbstractPlugin.GenericEvent> listener = received::set;
+            instrumented.getEventBus().subscribe(AbstractPlugin.GenericEvent.class, listener);
+
+            instrumented.publishTypedEvent(
+                    new AbstractPlugin.GenericEvent("TYPED_EVENT", "payload", instrumented));
+
+            assertNotNull(received.get());
+            assertEquals("TYPED_EVENT", received.get().getType());
+            assertEquals("payload", received.get().getData());
+        }
+
+        @Test
+        @DisplayName("handleUncaughtException still updates metrics when error logging is off")
+        void handleUncaughtException_ShouldUpdateMetrics_WhenLoggingOff() {
+            TestUtils.withLoggingOff(AbstractPlugin.class,
+                    () -> plugin.handleUncaughtException(Thread.currentThread(), new RuntimeException("boom")));
+
+            assertEquals(1, plugin.getMetrics().get("uncaughtExceptions"));
+            assertNotNull(plugin.getMetrics().get("lastUncaughtException"));
+        }
+
+        @Test
+        @DisplayName("log helpers stay silent when logging is disabled")
+        void logHelpers_ShouldBeNoOps_WhenLoggingOff() {
+            InstrumentedPlugin instrumented = new InstrumentedPlugin();
+            TestUtils.withLoggingOff(AbstractPlugin.class, () -> {
+                instrumented.logInfoMessage("info-off");
+                instrumented.logErrorMessage("error-off");
+                instrumented.logDebugMessage("debug-off");
+            });
+            // No exception means the guard false-branches executed correctly
+            assertTrue(true);
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.protonmail.landrevillejf.ide.plugin;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.*;
@@ -602,6 +603,15 @@ class PluginConfigTest {
         assertEquals(firstHash, secondHash);
     }
 
+    @Test
+    void hashCode_ShouldDiffer_WhenAutoEnableDiffers() {
+        // Covers the true side of the autoEnable ternary in hashCode()
+        final PluginConfig autoEnabled = new PluginConfig();
+        autoEnabled.setAutoEnable(true);
+
+        assertNotEquals(config.hashCode(), autoEnabled.hashCode());
+    }
+
     // ==================== TOSTRING TESTS ====================
 
     @Test
@@ -627,5 +637,92 @@ class PluginConfigTest {
         ((Map<String, Object>) settingsMap.get("nested")).put("nestedKey", "modified");
 
         assertEquals("nestedValue", ((Map<String, Object>) config.getSetting("nested")).get("nestedKey"));
+    }
+
+    // ── Additional tests to cover missed branches ──────────────────────────
+
+    @Test
+    @DisplayName("equals returns true for same object")
+    void testEquals_SameObject_ReturnsTrue() {
+        assertEquals(config, config);
+    }
+
+    @Test
+    @DisplayName("equals returns false for null")
+    void testEquals_Null_ReturnsFalse() {
+        assertNotEquals(config, null);
+    }
+
+    @Test
+    @DisplayName("equals returns false for different class")
+    void testEquals_DifferentClass_ReturnsFalse() {
+        assertNotEquals(config, "not a config");
+    }
+
+    @Test
+    @DisplayName("equals returns false when autoEnable differs")
+    void testEquals_DifferentAutoEnable_ReturnsFalse() {
+        PluginConfig other = new PluginConfig();
+        config.setAutoEnable(true);
+        other.setAutoEnable(false);
+        assertNotEquals(config, other);
+    }
+
+    @Test
+    @DisplayName("equals returns false when settings differ")
+    void testEquals_DifferentSettings_ReturnsFalse() {
+        PluginConfig other = new PluginConfig();
+        config.setSetting("key", "value1");
+        other.setSetting("key", "value2");
+        assertNotEquals(config, other);
+    }
+
+    @Test
+    @DisplayName("equals returns false when enabledFeatures differ")
+    void testEquals_DifferentFeatures_ReturnsFalse() {
+        PluginConfig other = new PluginConfig();
+        config.enableFeature("featureA");
+        assertNotEquals(config, other);
+    }
+
+    @Test
+    @DisplayName("equals returns false when metadata differ")
+    void testEquals_DifferentMetadata_ReturnsFalse() {
+        PluginConfig other = new PluginConfig();
+        config.setMetadata("k", "v1");
+        other.setMetadata("k", "v2");
+        assertNotEquals(config, other);
+    }
+
+    @Test
+    @DisplayName("equals returns true for equal configs")
+    void testEquals_EqualConfigs_ReturnsTrue() {
+        PluginConfig a = new PluginConfig();
+        PluginConfig b = new PluginConfig();
+        a.setSetting("x", 1); b.setSetting("x", 1);
+        assertEquals(a, b);
+    }
+
+    @Test
+    @DisplayName("hashCode is consistent with equals")
+    void testHashCode_ConsistentWithEquals() {
+        PluginConfig a = new PluginConfig();
+        PluginConfig b = new PluginConfig();
+        assertEquals(a.hashCode(), b.hashCode());
+    }
+
+    @Test
+    @DisplayName("mergeWith skips feature already present in this config")
+    void testMergeWith_FeatureAlreadyPresent_NotDuplicated() {
+        config.enableFeature("sharedFeature");
+        PluginConfig other = new PluginConfig();
+        other.enableFeature("sharedFeature");
+        other.enableFeature("newFeature");
+        config.merge(other);
+        // sharedFeature should appear only once
+        long count = config.getEnabledFeatures().stream()
+                .filter("sharedFeature"::equals).count();
+        assertEquals(1, count);
+        assertTrue(config.getEnabledFeatures().contains("newFeature"));
     }
 }

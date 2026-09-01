@@ -6,6 +6,14 @@ import java.util.Set;
 
 /**
  * Permission management service for plugins with role-based access control.
+ * <p>
+ * Supports fine-grained permission management, role assignment, and audit logging
+ * for plugin security and access control.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
  */
 public interface PluginPermissionService {
 

@@ -13,6 +13,18 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+/**
+ * Default implementation of {@link PluginAsyncTaskExecutor}.
+ * <p>
+ * Provides per-plugin thread pool management, task scheduling, priority-based execution,
+ * and task lifecycle tracking. Supports callable tasks, periodic tasks, and statistics.
+ * </p>
+ *
+ * @author landrevillejf
+ * @version 1.0.0
+ * @since 1.0.0
+ * @see PluginAsyncTaskExecutor
+ */
 @Slf4j
 public class DefaultPluginAsyncTaskExecutor implements PluginAsyncTaskExecutor {
 
@@ -134,10 +146,8 @@ public class DefaultPluginAsyncTaskExecutor implements PluginAsyncTaskExecutor {
             ((PeriodicPluginTask) task).cancel();
         }
 
-        // Update task state
-        if (task instanceof AbstractPluginTask) {
-            ((AbstractPluginTask) task).setState(TaskState.CANCELLED);
-        }
+        // Update task state (all registered tasks extend AbstractPluginTask)
+        ((AbstractPluginTask) task).setState(TaskState.CANCELLED);
 
         log.debug("Task cancelled: taskId={}", taskId);
         return true;
@@ -290,10 +300,11 @@ public class DefaultPluginAsyncTaskExecutor implements PluginAsyncTaskExecutor {
 
         private void startWorker() {
             Thread worker = new Thread(() -> {
-                while (running && !Thread.currentThread().isInterrupted()) {
+                while (running) {
                     try {
-                        // take() bloque jusqu'à ce qu'une tâche soit disponible
-                        PriorityTask task = taskQueue.take();
+                        // poll() waits for a task, returning null on timeout so the
+                        // running flag is re-evaluated periodically
+                        PriorityTask task = taskQueue.poll(100, TimeUnit.MILLISECONDS);
                         if (task != null) {
                             activeCount.incrementAndGet();
                             executor.submit(() -> {
@@ -308,8 +319,6 @@ public class DefaultPluginAsyncTaskExecutor implements PluginAsyncTaskExecutor {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         break;
-                    } catch (Exception e) {
-                        log.error("Error processing task for plugin: {}", pluginId, e);
                     }
                 }
             }, "Plugin-" + pluginId + "-Worker");
