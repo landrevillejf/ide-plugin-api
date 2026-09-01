@@ -252,7 +252,11 @@ pitest {
             'java.util.concurrent.ScheduledExecutorService',
             'java.util.concurrent.Executors',
             // JVM shutdown hook registration is not observable inside unit tests
-            'java.lang.Runtime'
+            'java.lang.Runtime',
+            // Logging is an unobservable side effect: removing a log statement or
+            // its isXEnabled() guard produces equivalent mutants that no behavioural
+            // assertion can kill.
+            'org.slf4j'
     ]
 
     excludedClasses = [
